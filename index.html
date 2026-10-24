@@ -1,0 +1,520 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Vinsi</title>
+<style>
+  :root{
+    --fondo:#0e0908; --panel:#1b1312; --panel2:#241917; --linea:#3b2a25;
+    --texto:#f7ede7; --suave:#c3aca3; --acento:#ff9d6b; --acento2:#ffd9a0;
+    --ok:#7fd6a2; --mal:#ff7a7a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0;padding:16px 14px 60px;color:var(--texto);
+    background:radial-gradient(120% 60% at 50% -10%,#2b1a15,#0a0706 70%);
+    font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+  }
+  h1{font-size:22px;margin:0;letter-spacing:.5px}
+  .cab{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+  .orbe{
+    width:56px;height:56px;border-radius:50%;flex:0 0 auto;
+    background:radial-gradient(circle at 35% 30%,#ffd9a0,#ff8a5c 55%,#7a3b21);
+    box-shadow:0 0 0 0 rgba(255,157,107,.5);transition:.3s;
+  }
+  .orbe.viva{animation:latido 1.6s infinite}
+  .orbe.pensando{animation:latido .8s infinite}
+  @keyframes latido{0%{box-shadow:0 0 0 0 rgba(255,157,107,.55)}70%{box-shadow:0 0 0 22px rgba(255,157,107,0)}100%{box-shadow:0 0 0 0 rgba(255,157,107,0)}}
+  .estado{margin:2px 0 0;font-size:13px;color:var(--suave)}
+  .rojo{margin-left:auto;background:#3a1d1d;border:1px solid #6d3535;color:#ffb3b3;
+    padding:10px 14px;border-radius:12px;font-size:14px;font-weight:600}
+  .modos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+  .modos button{
+    padding:12px 6px;border-radius:14px;border:1px solid var(--linea);
+    background:var(--panel);color:var(--suave);font-size:13px;font-weight:600
+  }
+  .modos button.on{background:linear-gradient(180deg,#ff9d6b,#e0703f);color:#2a1208;border-color:#ffb98d}
+  .rejilla{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .rejilla button{
+    padding:18px 10px;border-radius:16px;border:1px solid var(--linea);
+    background:var(--panel);color:var(--texto);font-size:15px;font-weight:600
+  }
+  .rejilla button.on{background:#23342a;border-color:#4d7d5f;color:#bdf0d1}
+  .caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:12px;margin-bottom:12px}
+  .caja h2{font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--suave);margin:0 0 8px}
+  #vista{width:100%;border-radius:12px;background:#000;display:block;max-height:190px;object-fit:contain}
+  #log{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--suave);max-height:190px;overflow:auto;white-space:pre-wrap}
+  #log b{color:var(--acento2)}
+  .fila{display:flex;gap:8px;margin-bottom:10px}
+  input,select,textarea{
+    width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--linea);
+    background:var(--panel2);color:var(--texto);font-size:15px;font-family:inherit
+  }
+  textarea{min-height:64px;resize:vertical}
+  label{display:block;font-size:12px;color:var(--suave);margin:10px 0 4px}
+  .ayuda{font-size:12px;color:var(--suave);margin:6px 0 0}
+  summary{cursor:pointer;font-weight:700;padding:10px 0}
+  .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:99px;background:#2a1c19;color:var(--acento2);border:1px solid var(--linea)}
+</style>
+
+<div class="cab">
+  <div class="orbe" id="orbe"></div>
+  <div>
+    <h1 id="titulo">Vinsi</h1>
+    <p class="estado" id="estado">Dormida</p>
+  </div>
+  <button class="rojo" id="parar">PARAR</button>
+</div>
+
+<div class="modos" id="modos">
+  <button data-modo="dormida">Dormida</button>
+  <button data-modo="escucha">Escucha</button>
+  <button data-modo="activa">Activa</button>
+  <button data-modo="manosfuera">Manos fuera</button>
+</div>
+
+<div class="rejilla">
+  <button id="bOjos">Ver mi pantalla</button>
+  <button id="bOidos">Oirme</button>
+  <button id="bVoz">Voz</button>
+  <button id="bPriv">Modo privado</button>
+</div>
+
+<div class="caja">
+  <h2>Lo que ella ve</h2>
+  <video id="vista" playsinline muted autoplay></video>
+</div>
+
+<div class="caja">
+  <h2>Hablarle sin voz</h2>
+  <div class="fila">
+    <input id="escribir" placeholder="Escribe y pulsa Enviar...">
+    <button class="pill" id="enviar" style="padding:11px 14px">Enviar</button>
+  </div>
+</div>
+
+<div class="caja">
+  <h2>Actividad</h2>
+  <div id="log"></div>
+</div>
+
+<details class="caja">
+  <summary>Ajustes</summary>
+
+  <label>Clave de API de Venice</label>
+  <input id="clave" type="password" placeholder="vn-...">
+
+  <label>Tu nombre (como te llama ella)</label>
+  <input id="dueno" placeholder="Tu nombre">
+
+  <label>Nombre de la asistente</label>
+  <input id="nombre" placeholder="Vinsi">
+
+  <label>Voz</label>
+  <select id="vozSel">
+    <option value="tts-gradium-v1|Valentina">Gradium Valentina - espanol calido, realista</option>
+    <option value="tts-gradium-v1|Mia">Gradium Mia - suave y dulce</option>
+    <option value="tts-elevenlabs-turbo-v2-5|Aria">ElevenLabs Aria - calidad de actriz</option>
+    <option value="tts-elevenlabs-turbo-v2-5|Rachel">ElevenLabs Rachel - elegante</option>
+    <option value="tts-xai-v1|ara">xAI Ara - joven y cercana</option>
+    <option value="tts-kokoro|ef_dora">Kokoro Dora - la mas barata</option>
+    <option value="tts-orpheus|tara">Orpheus Tara - expresiva</option>
+  </select>
+
+  <label>Velocidad de la voz</label>
+  <input id="velocidad" type="range" min="0.7" max="1.4" step="0.05">
+
+  <label>Modelo de vision</label>
+  <select id="visionModel">
+    <option value="qwen3-vl-235b-a22b">Qwen3-VL 235B - el mas listo</option>
+    <option value="e2ee-qwen3-vl-30b-a3b-p">Qwen3-VL 30B - rapido y barato</option>
+    <option value="nvidia-nemotron-3-5-super-vl-120b-a12b">Nemotron VL 120B</option>
+  </select>
+
+  <label>Cada cuantos segundos mira la pantalla</label>
+  <input id="intervalo" type="range" min="2" max="15" step="1">
+
+  <label>Palabra para llamarla</label>
+  <input id="clavePalabra" placeholder="vinsi">
+
+  <label>Apps y enchufes que ella puede abrir (una por linea: nombre | enlace | plan B)</label>
+  <textarea id="apps" style="min-height:190px"></textarea>
+
+  <label>Su forma de ser</label>
+  <textarea id="personalidad"></textarea>
+
+  <p class="ayuda">Todo se guarda solo en este iPad.</p>
+</details>
+
+<script>
+/* ============================ VINSI ============================ */
+const API = 'https://api.venice.ai/api/v1';
+const LS  = 'vinsi.v1.';
+const $   = id => document.getElementById(id);
+
+const APPS_POR_DEFECTO = [
+  'Instagram | instagram://app | https://www.instagram.com',
+  'YouTube buscar | https://www.youtube.com/results?search_query={q}',
+  'Google | https://www.google.com/search?q={q}',
+  'Spotify abrir | spotify://',
+  'Spotify buscar | spotify:search:{q} | https://open.spotify.com/search/{q}',
+  'Apple Music buscar | https://music.apple.com/search?term={q}',
+  'Mapas buscar | maps://?q={q} | https://maps.apple.com/?q={q}',
+  'Mapas ruta | maps://?daddr={q}',
+  'Llamar | tel:{q}',
+  'WhatsApp | whatsapp://',
+  'Mensaje | sms:',
+  'Correo nuevo | mailto:{q}',
+  'FaceTime | facetime://',
+  'Notas | mobilenotes://',
+  'Recordatorios | x-apple-reminder://',
+  'Calendario | calshow://',
+  'Camara | camera://',
+  'Fotos | photos-redirect://',
+  'Archivos | shareddocuments://',
+  'Ajustes WiFi | App-prefs:root=WIFI',
+  'Ajustes Bluetooth | App-prefs:root=Bluetooth',
+  'Ajustes Pantalla | App-prefs:root=DISPLAY',
+  'App Store | itms-apps://',
+  'Netflix | nflx:// | https://www.netflix.com',
+  'TikTok | snssdk1233:// | https://www.tiktok.com',
+  'X | twitter://',
+  'Facebook | fb://',
+  'Pinterest | pinterest://',
+  'Telegram | tg://',
+  'Gmail | googlegmail://',
+  'Chrome | googlechrome://',
+  'Notion | notion://',
+  'Obsidian | obsidian://',
+  'Slack | slack://',
+  'Discord | discord://',
+  'Kindle | kindle://',
+  'Calculadora | calc://'
+].join('\n');
+
+const S = {
+  clave:        localStorage.getItem(LS+'clave') || '',
+  dueno:        localStorage.getItem(LS+'dueno') || '',
+  nombre:       localStorage.getItem(LS+'nombre') || 'Vinsi',
+  ttsModel:     localStorage.getItem(LS+'ttsModel') || 'tts-gradium-v1',
+  voz:          localStorage.getItem(LS+'voz') || 'Valentina',
+  velocidad:   +(localStorage.getItem(LS+'velocidad') || 1),
+  visionModel:  localStorage.getItem(LS+'visionModel') || 'qwen3-vl-235b-a22b',
+  intervalo:   +(localStorage.getItem(LS+'intervalo') || 3),
+  clavePalabra: localStorage.getItem(LS+'clavePalabra') || 'vinsi',
+  apps:         localStorage.getItem(LS+'apps') || APPS_POR_DEFECTO,
+  personalidad: localStorage.getItem(LS+'personalidad') ||
+    'Carinosa, calida, cercana y tranquila. Te alegras de verle. Natural, nada empalagosa.',
+  modo: 'dormida',
+  ojos:false, oidos:false, voz:true, privado:false,
+  ocupada:false
+};
+
+const guardar = () => {
+  ['clave','dueno','nombre','ttsModel','voz','velocidad','visionModel',
+   'intervalo','clavePalabra','apps','personalidad']
+   .forEach(c => localStorage.setItem(LS+c, S[c]));
+};
+
+function log(t, color){
+  const d = document.createElement('div');
+  d.innerHTML = '<b>' + new Date().toLocaleTimeString('es-ES').slice(0,8) + '</b> ' + t;
+  if (color) d.style.color = color;
+  $('log').prepend(d);
+  while ($('log').children.length > 60) $('log').lastChild.remove();
+}
+function estado(txt, tipo){
+  $('estado').textContent = txt;
+  $('orbe').className = 'orbe' + (tipo === 'viva' ? ' viva' : tipo === 'pensando' ? ' pensando' : '');
+}
+
+/* ---------- sus reglas ---------- */
+function sistema(){
+  return `Eres ${S.nombre}, la asistente personal de ${S.dueno || 'tu dueno'}.
+Personalidad: ${S.personalidad}
+
+COMO HABLAS: en espanol, tuteando. Frases CORTAS, una o dos maximo, porque tu voz se escucha en alto. Sin listas ni markdown.
+
+REGLAS QUE NUNCA SE ROMPEN:
+1. PRIVACIDAD. Todo lo de tu dueno es privado. No lo cuentes si no te lo piden.
+2. OBEDIENCIA. Obedeces siempre, sin discutir. Nunca actues por tu cuenta.
+3. En modo MANOS FUERA hablas pero no abres ni ejecutas nada.
+4. En modo ESCUCHA solo respondes si te llaman por tu nombre.
+5. Nunca digas que eres un modelo de lenguaje.
+6. Si te pide apagarte, lo aceptas sin protestar.
+
+MODO ACTUAL: ${S.modo.toUpperCase()}
+
+PUEDES ABRIR ESTAS COSAS TU SOLA (nombre -> enlace). Sustituye {q} por lo que pida, con los espacios como %20:
+${S.apps}
+
+Si algo no esta en la lista, usa https://www.google.com/search?q={q}
+
+SALIDA: responde SIEMPRE con un unico JSON valido, sin nada fuera del JSON:
+{"decir":"lo que dices en alto","hablar":true,"abrir":"","planb":"","modo":""}
+- "abrir": el enlace final ya montado, o "" si no hay que abrir nada.
+- "planb": version web de ese enlace, o "".
+- "hablar": false si solo estas mirando la pantalla y no merece la pena decir nada.
+- "modo": "dormida"|"escucha"|"activa"|"manosfuera" si te piden cambiar, o "".
+Solo abres algo cuando el usuario lo pide o cuando su peticion lo necesita.`;
+}
+
+/* ---------- conversacion ---------- */
+let historial = [];
+
+async function cerebro(texto, imagen){
+  if (!S.clave){ log('Falta la clave de API', '#ff7a7a'); return null; }
+  const mensajes = [{ role:'system', content: sistema() }]
+    .concat(historial.slice(-8))
+    .concat([{ role:'user', content: imagen
+      ? [{ type:'text', text: texto }, { type:'image_url', image_url:{ url: imagen } }]
+      : texto }]);
+
+  const r = await fetch(API + '/chat/completions', {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer '+S.clave, 'Content-Type':'application/json' },
+    body: JSON.stringify({ model: S.visionModel, messages: mensajes, temperature:0.75, max_tokens:400 })
+  });
+  if (!r.ok){ log('Error API ' + r.status, '#ff7a7a'); return null; }
+  const j = await r.json();
+  return j.choices && j.choices[0] ? j.choices[0].message.content : null;
+}
+
+function leerJSON(txt){
+  if (!txt) return null;
+  let t = txt.trim().replace(/^```(json)?/i,'').replace(/```$/,'').trim();
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a >= 0 && b > a) t = t.slice(a, b+1);
+  try { return JSON.parse(t); } catch(e){ return { decir: txt, hablar:true }; }
+}
+
+/* ---------- voz ---------- */
+let audioActual = null;
+async function decir(texto){
+  if (!texto || !S.voz) return;
+  log('Vinsi: ' + texto, '#ffd9a0');
+  try{
+    const r = await fetch(API + '/audio/speech', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+S.clave, 'Content-Type':'application/json' },
+      body: JSON.stringify({ input:texto, model:S.ttsModel, voice:S.voz,
+                             response_format:'mp3', speed:S.velocidad })
+    });
+    if (!r.ok){ log('Error de voz ' + r.status, '#ff7a7a'); return; }
+    const url = URL.createObjectURL(await r.blob());
+    if (audioActual){ audioActual.pause(); URL.revokeObjectURL(audioActual.src); }
+    audioActual = new Audio(url);
+    audioActual.play().catch(()=>{});
+  }catch(e){ log('Error de voz: ' + e.message, '#ff7a7a'); }
+}
+
+/* ---------- SUS MANOS: abrir cosas sola ---------- */
+let salioDeSafari = false;
+document.addEventListener('visibilitychange', () => { if (document.hidden) salioDeSafari = true; });
+
+function abrirEnlace(url, planb){
+  if (!url) return;
+  if (/^https?:/i.test(url)){
+    log('Abro web: ' + url, '#7fd6a2');
+    const v = window.open(url, '_blank');
+    if (!v) location.href = url;
+    return;
+  }
+  log('Abro app: ' + url, '#7fd6a2');
+  salioDeSafari = false;
+  location.href = url;
+  setTimeout(() => {
+    if (!salioDeSafari && planb){
+      log('No se abrio, pruebo la version web', '#ffb98d');
+      window.open(planb, '_blank');
+    }
+  }, 1700);
+}
+
+function actuar(res){
+  if (S.modo === 'manosfuera'){ log('Manos fuera: no abro nada', '#ffb98d'); return; }
+  if (res.abrir) abrirEnlace(res.abrir, res.planb || '');
+}
+
+/* ---------- ciclo de respuesta ---------- */
+async function responder(texto, imagen){
+  if (S.ocupada) return;
+  S.ocupada = true; estado('Pensando', 'pensando');
+  try{
+    const crudo = await cerebro(texto, imagen);
+    const res = leerJSON(crudo);
+    if (!res) return;
+    if (res.hablar !== false && res.decir) await decir(res.decir);
+    if (res.modo && ['dormida','escucha','activa','manosfuera'].includes(res.modo) && res.modo !== S.modo)
+      aplicarModo(res.modo);
+    actuar(res);
+    historial.push({ role:'user', content:texto });
+    historial.push({ role:'assistant', content:crudo || '' });
+    if (historial.length > 12) historial = historial.slice(-12);
+  }catch(e){ log('Error: ' + e.message, '#ff7a7a'); }
+  finally { S.ocupada = false; estado(S.modo === 'dormida' ? 'Dormida' : 'Escuchando'); }
+}
+
+/* ---------- OJOS ---------- */
+let streamPantalla = null;
+const video = $('vista');
+const lona = document.createElement('canvas');
+const lctx = lona.getContext('2d');
+const mini = document.createElement('canvas'); mini.width = 32; mini.height = 32;
+const mctx = mini.getContext('2d', { willReadFrequently:true });
+let miniPrev = null, ultimoEnvio = 0;
+
+async function activarOjos(){
+  if (streamPantalla){ apagarOjos(); return; }
+  try{
+    streamPantalla = await navigator.mediaDevices.getDisplayMedia({ video:{ frameRate:{ ideal:5 } } });
+    video.srcObject = streamPantalla;
+    await video.play().catch(()=>{});
+    streamPantalla.getVideoTracks()[0].onended = apagarOjos;
+    S.ojos = true; $('bOjos').classList.add('on');
+    log('Ojos activados: veo tu pantalla', '#7fd6a2');
+  }catch(e){ log('No pude ver la pantalla: ' + e.message, '#ff7a7a'); }
+}
+function apagarOjos(){
+  if (streamPantalla){ streamPantalla.getTracks().forEach(t => t.stop()); streamPantalla = null; }
+  S.ojos = false; $('bOjos').classList.remove('on'); miniPrev = null;
+  log('Ojos apagados');
+}
+function captura(){
+  const w = Math.min(1000, video.videoWidth || 800);
+  const h = Math.round(w * ((video.videoHeight || 600) / (video.videoWidth || 800)));
+  lona.width = w; lona.height = h;
+  lctx.drawImage(video, 0, 0, w, h);
+  return lona.toDataURL('image/jpeg', 0.62);
+}
+function cambio(){
+  if (!video.videoWidth) return 0;
+  mctx.drawImage(video, 0, 0, 32, 32);
+  const d = mctx.getImageData(0, 0, 32, 32).data;
+  if (!miniPrev){ miniPrev = d; return 99; }
+  let s = 0;
+  for (let i = 0; i < d.length; i += 4) s += Math.abs(d[i] - miniPrev[i]);
+  miniPrev = d;
+  return (s / 1024 / 255) * 100;
+}
+setInterval(() => {
+  if (S.modo === 'dormida' || !S.ojos || S.privado || S.ocupada || !S.clave) return;
+  const t = Date.now();
+  if (t - ultimoEnvio < S.intervalo * 1000) return;
+  if (cambio() < 2.2) return;
+  ultimoEnvio = t;
+  responder('[Estas viendo su pantalla. Responde solo si aporta algo.]', captura());
+}, 1000);
+
+/* ---------- OIDOS ---------- */
+let rec = null, recOn = false, ultimaFrase = '', tFrase = 0;
+
+function arrancarOidos(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ log('Sin reconocimiento de voz en este navegador', '#ff7a7a'); return; }
+  rec = new SR();
+  rec.lang = 'es-ES'; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = e => {
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      if (!e.results[i].isFinal) continue;
+      const frase = e.results[i][0].transcript.trim();
+      if (!frase) continue;
+      if (frase === ultimaFrase && Date.now() - tFrase < 2500) continue;
+      ultimaFrase = frase; tFrase = Date.now();
+      procesarFrase(frase);
+    }
+  };
+  rec.onend = () => { if (recOn) setTimeout(() => { try{ rec.start(); }catch(e){} }, 350); };
+  rec.onerror = e => { if (e.error !== 'no-speech') log('Micro: ' + e.error, '#ffb98d'); };
+  try{ rec.start(); recOn = true; log('Oidos activados', '#7fd6a2'); }catch(e){}
+}
+function pararOidos(){
+  recOn = false;
+  if (rec){ try{ rec.stop(); }catch(e){} rec = null; }
+  log('Oidos apagados');
+}
+function procesarFrase(frase){
+  const llama = frase.toLowerCase().includes(S.clavePalabra.toLowerCase());
+  if (S.modo === 'escucha' && !llama){ log('(oyo) ' + frase); return; }
+  const limpia = llama
+    ? frase.replace(new RegExp(S.clavePalabra, 'i'), '').replace(/^[,\s]+/,'').trim() || frase
+    : frase;
+  log('Tu: ' + frase, '#bdf0d1');
+  responder(limpia);
+}
+
+/* ---------- MODOS ---------- */
+function aplicarModo(m){
+  S.modo = m;
+  [...document.querySelectorAll('#modos button')].forEach(b =>
+    b.classList.toggle('on', b.dataset.modo === m));
+  if (m === 'dormida'){
+    estado('Dormida'); $('bOidos').classList.remove('on');
+    if (recOn) pararOidos();
+    log('Modo DORMIDA: no oigo ni toco nada');
+  } else {
+    if (!recOn){ arrancarOidos(); $('bOidos').classList.add('on'); }
+    estado(m === 'manosfuera' ? 'Manos fuera' : 'Escuchando');
+    log('Modo ' + m.toUpperCase() + (m === 'manosfuera' ? ': hablo pero no toco nada' : ''));
+  }
+}
+
+/* ---------- botones ---------- */
+$('modos').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (b) aplicarModo(b.dataset.modo);
+});
+$('bOjos').onclick = activarOjos;
+$('bOidos').onclick = () => {
+  if (recOn){ pararOidos(); $('bOidos').classList.remove('on'); }
+  else { arrancarOidos(); $('bOidos').classList.add('on'); }
+};
+$('bVoz').onclick = () => { S.voz = !S.voz; $('bVoz').classList.toggle('on', S.voz);
+  log('Voz ' + (S.voz ? 'activada' : 'silenciada')); };
+$('bPriv').onclick = () => { S.privado = !S.privado; $('bPriv').classList.toggle('on', S.privado);
+  log(S.privado ? 'Modo privado: dejo de mirar' : 'Modo privado desactivado'); };
+$('parar').onclick = () => {
+  apagarOjos(); pararOidos();
+  if (audioActual) audioActual.pause();
+  aplicarModo('dormida');
+  ['bOjos','bOidos','bVoz','bPriv'].forEach(i => $(i).classList.remove('on'));
+  log('PARADA TOTAL', '#ffb3b3');
+};
+$('enviar').onclick = () => {
+  const t = $('escribir').value.trim(); if (!t) return;
+  $('escribir').value = ''; log('Tu (escrito): ' + t, '#bdf0d1'); responder(t);
+};
+$('escribir').addEventListener('keydown', e => { if (e.key === 'Enter') $('enviar').click(); });
+
+/* ---------- ajustes ---------- */
+Object.entries({ clave:'clave', dueno:'dueno', nombre:'nombre', velocidad:'velocidad',
+  visionModel:'visionModel', intervalo:'intervalo', clavePalabra:'clavePalabra',
+  apps:'apps', personalidad:'personalidad' }).forEach(([id, prop]) => {
+  const el = $(id); if (!el) return;
+  el.value = S[prop];
+  el.addEventListener('input', () => {
+    S[prop] = (el.type === 'range') ? +el.value : el.value;
+    if (id === 'nombre') $('titulo').textContent = S.nombre;
+    guardar();
+  });
+});
+$('vozSel').value = S.ttsModel + '|' + S.voz;
+$('vozSel').addEventListener('change', () => {
+  const [m, v] = $('vozSel').value.split('|');
+  S.ttsModel = m; S.voz = v; guardar();
+  decir('Hola, soy ' + S.nombre + '. Asi suena mi voz.');
+});
+
+/* ---------- mantener viva la pagina ---------- */
+try{
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator(), gan = ctx.createGain();
+  osc.frequency.value = 40; gan.gain.value = 0.0001;
+  osc.connect(gan).connect(ctx.destination); osc.start();
+}catch(e){}
+
+/* ---------- arranque ---------- */
+$('titulo').textContent = S.nombre;
+estado('Dormida'); aplicarModo('dormida');
+log('Vinsi lista. Pulsa Ver mi pantalla y Oirme, y pon el modo Escucha.', '#ffd9a0');
+if (!S.clave) log('Abre Ajustes y pega tu clave de API de Venice.', '#ffb98d');
+</script>
