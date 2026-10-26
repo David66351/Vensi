@@ -5,7 +5,7 @@
 <title>Vinsi</title>
 <style>
   :root{
-    --fondo:#0e0908; --panel:#1b1312; --panel2:#241917; --linea:#3b2a25;
+    --panel:#1b1312; --panel2:#241917; --linea:#3b2a25;
     --texto:#f7ede7; --suave:#c3aca3; --acento:#ff9d6b; --acento2:#ffd9a0;
     --ok:#7fd6a2; --mal:#ff7a7a;
   }
@@ -26,6 +26,7 @@
   .orbe.pensando{animation:latido .8s infinite}
   @keyframes latido{0%{box-shadow:0 0 0 0 rgba(255,157,107,.55)}70%{box-shadow:0 0 0 22px rgba(255,157,107,0)}100%{box-shadow:0 0 0 0 rgba(255,157,107,0)}}
   .estado{margin:2px 0 0;font-size:13px;color:var(--suave)}
+  .cuota{font-size:11px;color:var(--suave)}
   .rojo{margin-left:auto;background:#3a1d1d;border:1px solid #6d3535;color:#ffb3b3;
     padding:10px 14px;border-radius:12px;font-size:14px;font-weight:600}
   .modos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
@@ -51,8 +52,10 @@
     background:var(--panel2);color:var(--texto);font-size:15px;font-family:inherit
   }
   textarea{min-height:64px;resize:vertical}
-  label{display:block;font-size:12px;color:var(--suave);margin:10px 0 4px}
-  .ayuda{font-size:12px;color:var(--suave);margin:6px 0 0}
+  label{display:block;font-size:12px;color:var(--suave);margin:12px 0 4px}
+  .ayuda{font-size:12px;color:var(--suave);margin:6px 0 0;line-height:1.4}
+  .mini{font-size:12px;padding:9px 12px;border-radius:10px;border:1px solid var(--linea);
+    background:var(--panel2);color:var(--acento2);font-weight:600}
   summary{cursor:pointer;font-weight:700;padding:10px 0}
   .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:99px;background:#2a1c19;color:var(--acento2);border:1px solid var(--linea)}
 </style>
@@ -62,6 +65,7 @@
   <div>
     <h1 id="titulo">Vinsi</h1>
     <p class="estado" id="estado">Dormida</p>
+    <p class="cuota" id="cuota"></p>
   </div>
   <button class="rojo" id="parar">PARAR</button>
 </div>
@@ -89,7 +93,7 @@
   <h2>Hablarle sin voz</h2>
   <div class="fila">
     <input id="escribir" placeholder="Escribe y pulsa Enviar...">
-    <button class="pill" id="enviar" style="padding:11px 14px">Enviar</button>
+    <button class="mini" id="enviar">Enviar</button>
   </div>
 </div>
 
@@ -101,56 +105,108 @@
 <details class="caja">
   <summary>Ajustes</summary>
 
-  <label>Clave de API de Venice</label>
-  <input id="clave" type="password" placeholder="vn-...">
+  <h2 style="margin-top:14px">Su cabeza</h2>
 
-  <label>Tu nombre (como te llama ella)</label>
-  <input id="dueno" placeholder="Tu nombre">
+  <label>Proveedor</label>
+  <select id="proveedor">
+    <option value="gemini">Google Gemini - GRATIS, sin tarjeta</option>
+    <option value="groq">Groq - GRATIS, muy rapido</option>
+    <option value="venice">Venice - de pago, lo mas privado</option>
+  </select>
 
-  <label>Nombre de la asistente</label>
-  <input id="nombre" placeholder="Vinsi">
+  <label>Clave del proveedor</label>
+  <input id="clave" type="password" placeholder="Pega aqui la clave">
+  <p class="ayuda" id="ayudaClave"></p>
+
+  <label>Modelo</label>
+  <div class="fila">
+    <input id="modelo" placeholder="nombre del modelo">
+    <button class="mini" id="verModelos">Ver</button>
+  </div>
+
+  <h2 style="margin-top:18px">Su voz</h2>
+
+  <label>Motor de voz</label>
+  <select id="motorVoz">
+    <option value="ipad">La voz del iPad - GRATIS, sin internet</option>
+    <option value="venice">Voz de Venice - de pago, mas humana</option>
+  </select>
+
+  <label>Clave de Venice (solo si usas su voz)</label>
+  <input id="claveVoz" type="password" placeholder="vn-... (opcional)">
 
   <label>Voz</label>
-  <select id="vozSel">
-    <option value="tts-gradium-v1|Valentina">Gradium Valentina - espanol calido, realista</option>
-    <option value="tts-gradium-v1|Mia">Gradium Mia - suave y dulce</option>
-    <option value="tts-elevenlabs-turbo-v2-5|Aria">ElevenLabs Aria - calidad de actriz</option>
-    <option value="tts-elevenlabs-turbo-v2-5|Rachel">ElevenLabs Rachel - elegante</option>
-    <option value="tts-xai-v1|ara">xAI Ara - joven y cercana</option>
-    <option value="tts-kokoro|ef_dora">Kokoro Dora - la mas barata</option>
-    <option value="tts-orpheus|tara">Orpheus Tara - expresiva</option>
-  </select>
+  <select id="vozSel"></select>
 
   <label>Velocidad de la voz</label>
   <input id="velocidad" type="range" min="0.7" max="1.4" step="0.05">
 
-  <label>Modelo de vision</label>
-  <select id="visionModel">
-    <option value="qwen3-vl-235b-a22b">Qwen3-VL 235B - el mas listo</option>
-    <option value="e2ee-qwen3-vl-30b-a3b-p">Qwen3-VL 30B - rapido y barato</option>
-    <option value="nvidia-nemotron-3-5-super-vl-120b-a12b">Nemotron VL 120B</option>
-  </select>
+  <div class="fila" style="margin-top:10px">
+    <button class="mini" id="probarVoz">Probar la voz</button>
+    <button class="mini" id="masVoces">Mas voces del iPad</button>
+  </div>
 
-  <label>Cada cuantos segundos mira la pantalla</label>
-  <input id="intervalo" type="range" min="2" max="15" step="1">
+  <h2 style="margin-top:18px">Cuota y vista</h2>
+
+  <label>Ahorro de consultas</label>
+  <select id="cuota">
+    <option value="ahorro">Ahorro - mira cada 10 s (aguanta mas)</option>
+    <option value="normal">Normal - mira cada 5 s</option>
+    <option value="intenso">Intenso - mira cada 3 s (gasta mas)</option>
+  </select>
+  <p class="ayuda">Consultas hechas hoy: <b id="usos">0</b> de 1500</p>
+
+  <h2 style="margin-top:18px">Ella</h2>
+
+  <label>Tu nombre</label>
+  <input id="dueno" placeholder="Tu nombre">
+
+  <label>Su nombre</label>
+  <input id="nombre" placeholder="Vinsi">
 
   <label>Palabra para llamarla</label>
   <input id="clavePalabra" placeholder="vinsi">
 
-  <label>Apps y enchufes que ella puede abrir (una por linea: nombre | enlace | plan B)</label>
-  <textarea id="apps" style="min-height:190px"></textarea>
-
   <label>Su forma de ser</label>
   <textarea id="personalidad"></textarea>
+
+  <label>Apps y enchufes que puede abrir (una por linea: nombre | enlace | plan B)</label>
+  <textarea id="apps" style="min-height:190px"></textarea>
 
   <p class="ayuda">Todo se guarda solo en este iPad.</p>
 </details>
 
 <script>
 /* ============================ VINSI ============================ */
-const API = 'https://api.venice.ai/api/v1';
-const LS  = 'vinsi.v1.';
-const $   = id => document.getElementById(id);
+const LS = 'vinsi.v2.';
+const $  = id => document.getElementById(id);
+
+const PROVEEDORES = {
+  gemini: {
+    nombre:'Google Gemini',
+    base:'https://generativelanguage.googleapis.com/v1beta/openai',
+    modelos:['gemini-3-flash','gemini-3-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite'],
+    ayuda:'Clave gratis en aistudio.google.com/apikey. Sin tarjeta.'
+  },
+  groq: {
+    nombre:'Groq',
+    base:'https://api.groq.com/openai/v1',
+    modelos:['meta-llama/llama-4-scout-17b-16e-instruct','meta-llama/llama-4-maverick-17b-128e-instruct','qwen/qwen3-vl-32b'],
+    ayuda:'Clave gratis en console.groq.com/keys. Sin tarjeta.'
+  },
+  venice: {
+    nombre:'Venice',
+    base:'https://api.venice.ai/api/v1',
+    modelos:['qwen3-vl-235b-a22b','e2ee-qwen3-vl-30b-a3b-p','nvidia-nemotron-3-5-super-vl-120b-a12b'],
+    ayuda:'Clave en venice.ai/settings/api. Se paga por uso.'
+  }
+};
+
+const VOZ_VENICE = [
+  ['tts-gradium-v1','Valentina'],['tts-gradium-v1','Mia'],
+  ['tts-elevenlabs-turbo-v2-5','Aria'],['tts-elevenlabs-turbo-v2-5','Rachel'],
+  ['tts-xai-v1','ara'],['tts-orpheus','tara'],['tts-kokoro','ef_dora']
+];
 
 const APPS_POR_DEFECTO = [
   'Instagram | instagram://app | https://www.instagram.com',
@@ -192,29 +248,56 @@ const APPS_POR_DEFECTO = [
   'Calculadora | calc://'
 ].join('\n');
 
+const PRESETS = {
+  ahorro:  { intervalo:10, umbral:4 },
+  normal:  { intervalo:5,  umbral:2.5 },
+  intenso: { intervalo:3,  umbral:2 }
+};
+
+const hoyISO = () => new Date().toISOString().slice(0,10);
+
 const S = {
-  clave:        localStorage.getItem(LS+'clave') || '',
-  dueno:        localStorage.getItem(LS+'dueno') || '',
-  nombre:       localStorage.getItem(LS+'nombre') || 'Vinsi',
+  proveedor:    localStorage.getItem(LS+'proveedor') || 'gemini',
+  claves:       JSON.parse(localStorage.getItem(LS+'claves') || '{}'),
+  claveVoz:     localStorage.getItem(LS+'claveVoz') || '',
+  modelo:       localStorage.getItem(LS+'modelo') || PROVEEDORES.gemini.modelos[0],
+  motorVoz:     localStorage.getItem(LS+'motorVoz') || 'ipad',
+  vozIpad:      localStorage.getItem(LS+'vozIpad') || '',
   ttsModel:     localStorage.getItem(LS+'ttsModel') || 'tts-gradium-v1',
   voz:          localStorage.getItem(LS+'voz') || 'Valentina',
   velocidad:   +(localStorage.getItem(LS+'velocidad') || 1),
-  visionModel:  localStorage.getItem(LS+'visionModel') || 'qwen3-vl-235b-a22b',
-  intervalo:   +(localStorage.getItem(LS+'intervalo') || 3),
+  cuota:        localStorage.getItem(LS+'cuota') || 'normal',
+  dueno:        localStorage.getItem(LS+'dueno') || '',
+  nombre:       localStorage.getItem(LS+'nombre') || 'Vinsi',
   clavePalabra: localStorage.getItem(LS+'clavePalabra') || 'vinsi',
   apps:         localStorage.getItem(LS+'apps') || APPS_POR_DEFECTO,
   personalidad: localStorage.getItem(LS+'personalidad') ||
     'Carinosa, calida, cercana y tranquila. Te alegras de verle. Natural, nada empalagosa.',
-  modo: 'dormida',
-  ojos:false, oidos:false, voz:true, privado:false,
-  ocupada:false
+  modo:'dormida', ojos:false, oidos:false, voz:true, privado:false, ocupada:false
 };
 
 const guardar = () => {
-  ['clave','dueno','nombre','ttsModel','voz','velocidad','visionModel',
-   'intervalo','clavePalabra','apps','personalidad']
+  localStorage.setItem(LS+'proveedor', S.proveedor);
+  localStorage.setItem(LS+'claves', JSON.stringify(S.claves));
+  ['claveVoz','modelo','motorVoz','vozIpad','ttsModel','voz','velocidad','cuota',
+   'dueno','nombre','clavePalabra','apps','personalidad']
    .forEach(c => localStorage.setItem(LS+c, S[c]));
 };
+
+function contadorUsos(){
+  if (localStorage.getItem(LS+'dia') !== hoyISO()){
+    localStorage.setItem(LS+'dia', hoyISO());
+    localStorage.setItem(LS+'usos', '0');
+  }
+  return +(localStorage.getItem(LS+'usos') || 0);
+}
+function sumarUso(){
+  const n = contadorUsos() + 1;
+  localStorage.setItem(LS+'usos', n);
+  $('usos').textContent = n;
+  $('cuota').textContent = n >= 1400 ? 'Cuota casi agotada: ' + n + '/1500'
+    : (S.modo === 'dormida' ? '' : 'Consultas hoy: ' + n + '/1500');
+}
 
 function log(t, color){
   const d = document.createElement('div');
@@ -263,19 +346,26 @@ Solo abres algo cuando el usuario lo pide o cuando su peticion lo necesita.`;
 let historial = [];
 
 async function cerebro(texto, imagen){
-  if (!S.clave){ log('Falta la clave de API', '#ff7a7a'); return null; }
+  const clave = S.claves[S.proveedor];
+  if (!clave){ log('Falta la clave de ' + PROVEEDORES[S.proveedor].nombre, '#ff7a7a'); return null; }
+
   const mensajes = [{ role:'system', content: sistema() }]
     .concat(historial.slice(-8))
     .concat([{ role:'user', content: imagen
       ? [{ type:'text', text: texto }, { type:'image_url', image_url:{ url: imagen } }]
       : texto }]);
 
-  const r = await fetch(API + '/chat/completions', {
+  sumarUso();
+  const r = await fetch(PROVEEDORES[S.proveedor].base + '/chat/completions', {
     method:'POST',
-    headers:{ 'Authorization':'Bearer '+S.clave, 'Content-Type':'application/json' },
-    body: JSON.stringify({ model: S.visionModel, messages: mensajes, temperature:0.75, max_tokens:400 })
+    headers:{ 'Authorization':'Bearer '+clave, 'Content-Type':'application/json' },
+    body: JSON.stringify({ model:S.modelo, messages:mensajes, temperature:0.75, max_tokens:400 })
   });
-  if (!r.ok){ log('Error API ' + r.status, '#ff7a7a'); return null; }
+  if (!r.ok){
+    const t = await r.text();
+    log('Error ' + r.status + ': ' + t.slice(0,120), '#ff7a7a');
+    return null;
+  }
   const j = await r.json();
   return j.choices && j.choices[0] ? j.choices[0].message.content : null;
 }
@@ -290,25 +380,49 @@ function leerJSON(txt){
 
 /* ---------- voz ---------- */
 let audioActual = null;
-async function decir(texto){
-  if (!texto || !S.voz) return;
-  log('Vinsi: ' + texto, '#ffd9a0');
+
+function vocesIpad(){
+  if (!('speechSynthesis' in window)) return [];
+  return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('es'));
+}
+
+function decirIpad(texto){
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang = 'es-ES';
+  u.rate = S.velocidad;
+  const v = vocesIpad().find(v => v.name === S.vozIpad);
+  if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+async function decirVenice(texto){
+  const clave = S.claveVoz || S.claves.venice;
+  if (!clave){ decirIpad(texto); return; }
   try{
-    const r = await fetch(API + '/audio/speech', {
+    const r = await fetch('https://api.venice.ai/api/v1/audio/speech', {
       method:'POST',
-      headers:{ 'Authorization':'Bearer '+S.clave, 'Content-Type':'application/json' },
+      headers:{ 'Authorization':'Bearer '+clave, 'Content-Type':'application/json' },
       body: JSON.stringify({ input:texto, model:S.ttsModel, voice:S.voz,
                              response_format:'mp3', speed:S.velocidad })
     });
-    if (!r.ok){ log('Error de voz ' + r.status, '#ff7a7a'); return; }
+    if (!r.ok){ log('Error de voz ' + r.status + ', uso la del iPad', '#ffb98d'); decirIpad(texto); return; }
     const url = URL.createObjectURL(await r.blob());
     if (audioActual){ audioActual.pause(); URL.revokeObjectURL(audioActual.src); }
     audioActual = new Audio(url);
     audioActual.play().catch(()=>{});
-  }catch(e){ log('Error de voz: ' + e.message, '#ff7a7a'); }
+  }catch(e){ decirIpad(texto); }
 }
 
-/* ---------- SUS MANOS: abrir cosas sola ---------- */
+async function decir(texto){
+  if (!texto || !S.voz) return;
+  log('Vinsi: ' + texto, '#ffd9a0');
+  if (S.motorVoz === 'ipad') decirIpad(texto);
+  else await decirVenice(texto);
+}
+
+/* ---------- sus manos ---------- */
 let salioDeSafari = false;
 document.addEventListener('visibilitychange', () => { if (document.hidden) salioDeSafari = true; });
 
@@ -330,13 +444,12 @@ function abrirEnlace(url, planb){
     }
   }, 1700);
 }
-
 function actuar(res){
   if (S.modo === 'manosfuera'){ log('Manos fuera: no abro nada', '#ffb98d'); return; }
   if (res.abrir) abrirEnlace(res.abrir, res.planb || '');
 }
 
-/* ---------- ciclo de respuesta ---------- */
+/* ---------- ciclo ---------- */
 async function responder(texto, imagen){
   if (S.ocupada) return;
   S.ocupada = true; estado('Pensando', 'pensando');
@@ -398,10 +511,11 @@ function cambio(){
   return (s / 1024 / 255) * 100;
 }
 setInterval(() => {
-  if (S.modo === 'dormida' || !S.ojos || S.privado || S.ocupada || !S.clave) return;
+  if (S.modo === 'dormida' || !S.ojos || S.privado || S.ocupada || !S.claves[S.proveedor]) return;
   const t = Date.now();
-  if (t - ultimoEnvio < S.intervalo * 1000) return;
-  if (cambio() < 2.2) return;
+  const p = PRESETS[S.cuota];
+  if (t - ultimoEnvio < p.intervalo * 1000) return;
+  if (cambio() < p.umbral) return;
   ultimoEnvio = t;
   responder('[Estas viendo su pantalla. Responde solo si aporta algo.]', captura());
 }, 1000);
@@ -475,6 +589,7 @@ $('bPriv').onclick = () => { S.privado = !S.privado; $('bPriv').classList.toggle
 $('parar').onclick = () => {
   apagarOjos(); pararOidos();
   if (audioActual) audioActual.pause();
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
   aplicarModo('dormida');
   ['bOjos','bOidos','bVoz','bPriv'].forEach(i => $(i).classList.remove('on'));
   log('PARADA TOTAL', '#ffb3b3');
@@ -486,25 +601,103 @@ $('enviar').onclick = () => {
 $('escribir').addEventListener('keydown', e => { if (e.key === 'Enter') $('enviar').click(); });
 
 /* ---------- ajustes ---------- */
-Object.entries({ clave:'clave', dueno:'dueno', nombre:'nombre', velocidad:'velocidad',
-  visionModel:'visionModel', intervalo:'intervalo', clavePalabra:'clavePalabra',
+function pintarAyudaClave(){
+  $('ayudaClave').textContent = PROVEEDORES[S.proveedor].ayuda;
+}
+function pintarModelos(){
+  $('modelo').value = S.modelo;
+}
+function pintarVoces(){
+  const sel = $('vozSel'); sel.innerHTML = '';
+  if (S.motorVoz === 'ipad'){
+    const vs = vocesIpad();
+    if (!vs.length){
+      sel.innerHTML = '<option value="">(aun cargando las voces del iPad)</option>';
+      return;
+    }
+    vs.forEach(v => {
+      const o = document.createElement('option');
+      o.value = 'ipad::' + v.name;
+      o.textContent = v.name + ' (' + v.lang + ')' + (v.localService ? ' - en el iPad' : '');
+      sel.appendChild(o);
+    });
+    const elegida = vs.find(v => v.name === S.vozIpad) ? S.vozIpad : vs[0].name;
+    S.vozIpad = elegida;
+    sel.value = 'ipad::' + elegida;
+  } else {
+    VOZ_VENICE.forEach(([m, v]) => {
+      const o = document.createElement('option');
+      o.value = m + '::' + v;
+      o.textContent = m.replace('tts-','') + ' - ' + v;
+      sel.appendChild(o);
+    });
+    sel.value = S.ttsModel + '::' + S.voz;
+  }
+}
+
+$('proveedor').onchange = () => {
+  S.proveedor = $('proveedor').value;
+  S.modelo = PROVEEDORES[S.proveedor].modelos[0];
+  $('clave').value = S.claves[S.proveedor] || '';
+  pintarModelos(); pintarAyudaClave(); guardar();
+  log('Proveedor: ' + PROVEEDORES[S.proveedor].nombre);
+};
+$('clave').addEventListener('input', () => {
+  S.claves[S.proveedor] = $('clave').value.trim(); guardar();
+});
+$('claveVoz').addEventListener('input', () => { S.claveVoz = $('claveVoz').value.trim(); guardar(); });
+$('modelo').addEventListener('input', () => { S.modelo = $('modelo').value.trim(); guardar(); });
+
+$('verModelos').onclick = async () => {
+  const clave = S.claves[S.proveedor];
+  if (!clave){ log('Pon primero la clave', '#ffb98d'); return; }
+  log('Mirando modelos de ' + PROVEEDORES[S.proveedor].nombre + '...');
+  try{
+    const r = await fetch(PROVEEDORES[S.proveedor].base + '/models',
+      { headers:{ 'Authorization':'Bearer '+clave } });
+    const j = await r.json();
+    const lista = (j.data || j.models || []).map(m => m.id || m.name).filter(Boolean);
+    log('Modelos: ' + lista.slice(0,25).join(' , '), '#7fd6a2');
+  }catch(e){ log('No pude listar: ' + e.message, '#ff7a7a'); }
+};
+
+$('motorVoz').onchange = () => { S.motorVoz = $('motorVoz').value; pintarVoces(); guardar(); };
+$('vozSel').onchange = () => {
+  const [a, b] = $('vozSel').value.split('::');
+  if (a === 'ipad') S.vozIpad = b; else { S.ttsModel = a; S.voz = b; }
+  guardar();
+  decir('Hola, soy ' + S.nombre + '. Asi suena mi voz.');
+};
+$('probarVoz').onclick = () => decir('Hola ' + (S.dueno || '') + ', soy ' + S.nombre + '. Asi suena mi voz.');
+$('masVoces').onclick = () => log('Ajustes -> Accesibilidad -> Contenido leido -> Voces -> Espanol -> descarga las Mejoradas. Luego vuelve y toca aqui.', '#ffd9a0');
+
+$('cuota').onchange = () => { S.cuota = $('cuota').value; guardar(); };
+
+Object.entries({ dueno:'dueno', nombre:'nombre', clavePalabra:'clavePalabra',
   apps:'apps', personalidad:'personalidad' }).forEach(([id, prop]) => {
-  const el = $(id); if (!el) return;
-  el.value = S[prop];
+  const el = $(id); el.value = S[prop];
   el.addEventListener('input', () => {
-    S[prop] = (el.type === 'range') ? +el.value : el.value;
+    S[prop] = el.value;
     if (id === 'nombre') $('titulo').textContent = S.nombre;
     guardar();
   });
 });
-$('vozSel').value = S.ttsModel + '|' + S.voz;
-$('vozSel').addEventListener('change', () => {
-  const [m, v] = $('vozSel').value.split('|');
-  S.ttsModel = m; S.voz = v; guardar();
-  decir('Hola, soy ' + S.nombre + '. Asi suena mi voz.');
-});
+$('velocidad').value = S.velocidad;
+$('velocidad').addEventListener('input', () => { S.velocidad = +$('velocidad').value; guardar(); });
 
-/* ---------- mantener viva la pagina ---------- */
+/* ---------- arranque ---------- */
+$('proveedor').value = S.proveedor;
+$('clave').value = S.claves[S.proveedor] || '';
+$('claveVoz').value = S.claveVoz;
+$('motorVoz').value = S.motorVoz;
+$('cuota').value = S.cuota;
+pintarAyudaClave(); pintarModelos();
+if ('speechSynthesis' in window){
+  speechSynthesis.onvoiceschanged = pintarVoces;
+  setTimeout(pintarVoces, 300);
+}
+pintarVoces();
+
 try{
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const osc = ctx.createOscillator(), gan = ctx.createGain();
@@ -512,9 +705,9 @@ try{
   osc.connect(gan).connect(ctx.destination); osc.start();
 }catch(e){}
 
-/* ---------- arranque ---------- */
 $('titulo').textContent = S.nombre;
+$('usos').textContent = contadorUsos();
 estado('Dormida'); aplicarModo('dormida');
-log('Vinsi lista. Pulsa Ver mi pantalla y Oirme, y pon el modo Escucha.', '#ffd9a0');
-if (!S.clave) log('Abre Ajustes y pega tu clave de API de Venice.', '#ffb98d');
+log('Vinsi lista. Proveedor: ' + PROVEEDORES[S.proveedor].nombre, '#ffd9a0');
+if (!S.claves[S.proveedor]) log('Abre Ajustes y pega tu clave gratis.', '#ffb98d');
 </script>
