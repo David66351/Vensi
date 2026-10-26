@@ -44,7 +44,7 @@
   .caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:12px;margin-bottom:12px}
   .caja h2{font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--suave);margin:0 0 8px}
   #vista{width:100%;border-radius:12px;background:#000;display:block;max-height:190px;object-fit:contain}
-  #log{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--suave);max-height:190px;overflow:auto;white-space:pre-wrap}
+  #log{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--suave);max-height:220px;overflow:auto;white-space:pre-wrap}
   #log b{color:var(--acento2)}
   .fila{display:flex;gap:8px;margin-bottom:10px}
   input,select,textarea{
@@ -55,7 +55,7 @@
   label{display:block;font-size:12px;color:var(--suave);margin:12px 0 4px}
   .ayuda{font-size:12px;color:var(--suave);margin:6px 0 0;line-height:1.4}
   .mini{font-size:12px;padding:9px 12px;border-radius:10px;border:1px solid var(--linea);
-    background:var(--panel2);color:var(--acento2);font-weight:600}
+    background:var(--panel2);color:var(--acento2);font-weight:600;white-space:nowrap}
   summary{cursor:pointer;font-weight:700;padding:10px 0}
   .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:99px;background:#2a1c19;color:var(--acento2);border:1px solid var(--linea)}
 </style>
@@ -124,6 +124,17 @@
     <button class="mini" id="verModelos">Ver</button>
   </div>
 
+  <label>Cuanto piensa antes de contestar</label>
+  <select id="pensar">
+    <option value="minimal">Nada - lo mas rapido (recomendado)</option>
+    <option value="low">Poquito</option>
+    <option value="medium">Normal - mas lento pero mas listo</option>
+  </select>
+
+  <div class="fila" style="margin-top:12px">
+    <button class="mini" id="probarConexion">Probar la conexion</button>
+  </div>
+
   <h2 style="margin-top:18px">Su voz</h2>
 
   <label>Motor de voz</label>
@@ -178,26 +189,27 @@
 
 <script>
 /* ============================ VINSI ============================ */
-const LS = 'vinsi.v2.';
+const LS = 'vinsi.v3.';
 const $  = id => document.getElementById(id);
 
 const PROVEEDORES = {
   gemini: {
     nombre:'Google Gemini',
     base:'https://generativelanguage.googleapis.com/v1beta/openai',
-    modelos:['gemini-3-flash','gemini-3-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite'],
+    modelos:['gemini-3.1-flash-lite','gemini-3.8-flash','gemini-3.5-flash-lite',
+             'gemini-2.5-flash-lite','gemini-2.5-flash'],
     ayuda:'Clave gratis en aistudio.google.com/apikey. Sin tarjeta.'
   },
   groq: {
     nombre:'Groq',
     base:'https://api.groq.com/openai/v1',
-    modelos:['meta-llama/llama-4-scout-17b-16e-instruct','meta-llama/llama-4-maverick-17b-128e-instruct','qwen/qwen3-vl-32b'],
+    modelos:['meta-llama/llama-4-scout-17b-16e-instruct'],
     ayuda:'Clave gratis en console.groq.com/keys. Sin tarjeta.'
   },
   venice: {
     nombre:'Venice',
     base:'https://api.venice.ai/api/v1',
-    modelos:['qwen3-vl-235b-a22b','e2ee-qwen3-vl-30b-a3b-p','nvidia-nemotron-3-5-super-vl-120b-a12b'],
+    modelos:['qwen3-vl-235b-a22b','e2ee-qwen3-vl-30b-a3b-p'],
     ayuda:'Clave en venice.ai/settings/api. Se paga por uso.'
   }
 };
@@ -255,32 +267,35 @@ const PRESETS = {
 };
 
 const hoyISO = () => new Date().toISOString().slice(0,10);
+const limpia = t => (t || '').replace(/\s+/g,'').trim();
 
 const S = {
   proveedor:    localStorage.getItem(LS+'proveedor') || 'gemini',
   claves:       JSON.parse(localStorage.getItem(LS+'claves') || '{}'),
   claveVoz:     localStorage.getItem(LS+'claveVoz') || '',
   modelo:       localStorage.getItem(LS+'modelo') || PROVEEDORES.gemini.modelos[0],
+  pensar:       localStorage.getItem(LS+'pensar') || 'minimal',
   motorVoz:     localStorage.getItem(LS+'motorVoz') || 'ipad',
   vozIpad:      localStorage.getItem(LS+'vozIpad') || '',
   ttsModel:     localStorage.getItem(LS+'ttsModel') || 'tts-gradium-v1',
   voz:          localStorage.getItem(LS+'voz') || 'Valentina',
   velocidad:   +(localStorage.getItem(LS+'velocidad') || 1),
-  cuota:        localStorage.getItem(LS+'cuota') || 'normal',
+  cuota:        localStorage.getItem(LS+'cuota') || 'ahorro',
   dueno:        localStorage.getItem(LS+'dueno') || '',
   nombre:       localStorage.getItem(LS+'nombre') || 'Vinsi',
   clavePalabra: localStorage.getItem(LS+'clavePalabra') || 'vinsi',
   apps:         localStorage.getItem(LS+'apps') || APPS_POR_DEFECTO,
   personalidad: localStorage.getItem(LS+'personalidad') ||
     'Carinosa, calida, cercana y tranquila. Te alegras de verle. Natural, nada empalagosa.',
-  modo:'dormida', ojos:false, oidos:false, voz:true, privado:false, ocupada:false
+  modo:'dormida', ojos:false, oidos:false, voz:true, privado:false,
+  ocupada:false, tInicio:0
 };
 
 const guardar = () => {
   localStorage.setItem(LS+'proveedor', S.proveedor);
   localStorage.setItem(LS+'claves', JSON.stringify(S.claves));
-  ['claveVoz','modelo','motorVoz','vozIpad','ttsModel','voz','velocidad','cuota',
-   'dueno','nombre','clavePalabra','apps','personalidad']
+  ['claveVoz','modelo','pensar','motorVoz','vozIpad','ttsModel','voz','velocidad',
+   'cuota','dueno','nombre','clavePalabra','apps','personalidad']
    .forEach(c => localStorage.setItem(LS+c, S[c]));
 };
 
@@ -295,8 +310,7 @@ function sumarUso(){
   const n = contadorUsos() + 1;
   localStorage.setItem(LS+'usos', n);
   $('usos').textContent = n;
-  $('cuota').textContent = n >= 1400 ? 'Cuota casi agotada: ' + n + '/1500'
-    : (S.modo === 'dormida' ? '' : 'Consultas hoy: ' + n + '/1500');
+  $('cuota').textContent = n >= 1400 ? 'Cuota casi agotada: ' + n + '/1500' : '';
 }
 
 function log(t, color){
@@ -304,19 +318,20 @@ function log(t, color){
   d.innerHTML = '<b>' + new Date().toLocaleTimeString('es-ES').slice(0,8) + '</b> ' + t;
   if (color) d.style.color = color;
   $('log').prepend(d);
-  while ($('log').children.length > 60) $('log').lastChild.remove();
+  while ($('log').children.length > 80) $('log').lastChild.remove();
 }
 function estado(txt, tipo){
   $('estado').textContent = txt;
   $('orbe').className = 'orbe' + (tipo === 'viva' ? ' viva' : tipo === 'pensando' ? ' pensando' : '');
 }
+function libre(){ estado(S.modo === 'dormida' ? 'Dormida' : 'Escuchando'); }
 
 /* ---------- sus reglas ---------- */
 function sistema(){
   return `Eres ${S.nombre}, la asistente personal de ${S.dueno || 'tu dueno'}.
 Personalidad: ${S.personalidad}
 
-COMO HABLAS: en espanol, tuteando. Frases CORTAS, una o dos maximo, porque tu voz se escucha en alto. Sin listas ni markdown.
+COMO HABLAS: en espanol, tuteando. Frases CORTAS, una o dos maximo, porque tu voz se escucha en alto. Sin listas ni markdown. Se BREVE.
 
 REGLAS QUE NUNCA SE ROMPEN:
 1. PRIVACIDAD. Todo lo de tu dueno es privado. No lo cuentes si no te lo piden.
@@ -346,32 +361,51 @@ Solo abres algo cuando el usuario lo pide o cuando su peticion lo necesita.`;
 let historial = [];
 
 async function cerebro(texto, imagen){
-  const clave = S.claves[S.proveedor];
+  const clave = limpia(S.claves[S.proveedor]);
   if (!clave){ log('Falta la clave de ' + PROVEEDORES[S.proveedor].nombre, '#ff7a7a'); return null; }
 
   const mensajes = [{ role:'system', content: sistema() }]
-    .concat(historial.slice(-8))
+    .concat(historial.slice(-6))
     .concat([{ role:'user', content: imagen
       ? [{ type:'text', text: texto }, { type:'image_url', image_url:{ url: imagen } }]
       : texto }]);
 
+  const cuerpo = { model:S.modelo, messages:mensajes, max_tokens:900 };
+  if (S.proveedor === 'gemini') cuerpo.reasoning_effort = S.pensar;
+
+  const ctrl = new AbortController();
+  const reloj = setTimeout(() => ctrl.abort(), 25000);
+  const t0 = Date.now();
   sumarUso();
-  const r = await fetch(PROVEEDORES[S.proveedor].base + '/chat/completions', {
-    method:'POST',
-    headers:{ 'Authorization':'Bearer '+clave, 'Content-Type':'application/json' },
-    body: JSON.stringify({ model:S.modelo, messages:mensajes, temperature:0.75, max_tokens:400 })
-  });
-  if (!r.ok){
-    const t = await r.text();
-    log('Error ' + r.status + ': ' + t.slice(0,120), '#ff7a7a');
+
+  try{
+    const r = await fetch(PROVEEDORES[S.proveedor].base + '/chat/completions', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+clave, 'Content-Type':'application/json' },
+      body: JSON.stringify(cuerpo),
+      signal: ctrl.signal
+    });
+    clearTimeout(reloj);
+    if (!r.ok){
+      const t = await r.text();
+      log('Error ' + r.status + ': ' + t.slice(0,160), '#ff7a7a');
+      return null;
+    }
+    const j = await r.json();
+    const seg = ((Date.now()-t0)/1000).toFixed(1);
+    log('Respuesta en ' + seg + ' s', '#7fd6a2');
+    return j.choices && j.choices[0] ? j.choices[0].message.content : null;
+  }catch(e){
+    clearTimeout(reloj);
+    if (e.name === 'AbortError') log('Tardo mas de 25 s y lo deje', '#ffb98d');
+    else log('Error de red: ' + e.message, '#ff7a7a');
     return null;
   }
-  const j = await r.json();
-  return j.choices && j.choices[0] ? j.choices[0].message.content : null;
 }
 
 function leerJSON(txt){
   if (!txt) return null;
+  if (typeof txt !== 'string') txt = JSON.stringify(txt);
   let t = txt.trim().replace(/^```(json)?/i,'').replace(/```$/,'').trim();
   const a = t.indexOf('{'), b = t.lastIndexOf('}');
   if (a >= 0 && b > a) t = t.slice(a, b+1);
@@ -385,7 +419,6 @@ function vocesIpad(){
   if (!('speechSynthesis' in window)) return [];
   return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('es'));
 }
-
 function decirIpad(texto){
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.cancel();
@@ -396,9 +429,8 @@ function decirIpad(texto){
   if (v) u.voice = v;
   speechSynthesis.speak(u);
 }
-
 async function decirVenice(texto){
-  const clave = S.claveVoz || S.claves.venice;
+  const clave = limpia(S.claveVoz || S.claves.venice);
   if (!clave){ decirIpad(texto); return; }
   try{
     const r = await fetch('https://api.venice.ai/api/v1/audio/speech', {
@@ -407,14 +439,13 @@ async function decirVenice(texto){
       body: JSON.stringify({ input:texto, model:S.ttsModel, voice:S.voz,
                              response_format:'mp3', speed:S.velocidad })
     });
-    if (!r.ok){ log('Error de voz ' + r.status + ', uso la del iPad', '#ffb98d'); decirIpad(texto); return; }
+    if (!r.ok){ decirIpad(texto); return; }
     const url = URL.createObjectURL(await r.blob());
     if (audioActual){ audioActual.pause(); URL.revokeObjectURL(audioActual.src); }
     audioActual = new Audio(url);
     audioActual.play().catch(()=>{});
   }catch(e){ decirIpad(texto); }
 }
-
 async function decir(texto){
   if (!texto || !S.voz) return;
   log('Vinsi: ' + texto, '#ffd9a0');
@@ -451,22 +482,31 @@ function actuar(res){
 
 /* ---------- ciclo ---------- */
 async function responder(texto, imagen){
-  if (S.ocupada) return;
-  S.ocupada = true; estado('Pensando', 'pensando');
+  if (S.ocupada){ log('(aun pensando, espera)', '#ffb98d'); return; }
+  S.ocupada = true; S.tInicio = Date.now();
+  estado('Pensando', 'pensando');
   try{
     const crudo = await cerebro(texto, imagen);
     const res = leerJSON(crudo);
-    if (!res) return;
+    if (!res){ return; }
     if (res.hablar !== false && res.decir) await decir(res.decir);
     if (res.modo && ['dormida','escucha','activa','manosfuera'].includes(res.modo) && res.modo !== S.modo)
       aplicarModo(res.modo);
     actuar(res);
     historial.push({ role:'user', content:texto });
     historial.push({ role:'assistant', content:crudo || '' });
-    if (historial.length > 12) historial = historial.slice(-12);
+    if (historial.length > 10) historial = historial.slice(-10);
   }catch(e){ log('Error: ' + e.message, '#ff7a7a'); }
-  finally { S.ocupada = false; estado(S.modo === 'dormida' ? 'Dormida' : 'Escuchando'); }
+  finally { S.ocupada = false; libre(); }
 }
+
+/* desbloqueo automatico */
+setInterval(() => {
+  if (S.ocupada && Date.now() - S.tInicio > 40000){
+    S.ocupada = false; libre();
+    log('Desbloqueada: llevaba 40 s pensando', '#ffb98d');
+  }
+}, 5000);
 
 /* ---------- OJOS ---------- */
 let streamPantalla = null;
@@ -550,11 +590,11 @@ function pararOidos(){
 function procesarFrase(frase){
   const llama = frase.toLowerCase().includes(S.clavePalabra.toLowerCase());
   if (S.modo === 'escucha' && !llama){ log('(oyo) ' + frase); return; }
-  const limpia = llama
+  const limpiaTxt = llama
     ? frase.replace(new RegExp(S.clavePalabra, 'i'), '').replace(/^[,\s]+/,'').trim() || frase
     : frase;
   log('Tu: ' + frase, '#bdf0d1');
-  responder(limpia);
+  responder(limpiaTxt);
 }
 
 /* ---------- MODOS ---------- */
@@ -568,7 +608,7 @@ function aplicarModo(m){
     log('Modo DORMIDA: no oigo ni toco nada');
   } else {
     if (!recOn){ arrancarOidos(); $('bOidos').classList.add('on'); }
-    estado(m === 'manosfuera' ? 'Manos fuera' : 'Escuchando');
+    libre();
     log('Modo ' + m.toUpperCase() + (m === 'manosfuera' ? ': hablo pero no toco nada' : ''));
   }
 }
@@ -590,6 +630,7 @@ $('parar').onclick = () => {
   apagarOjos(); pararOidos();
   if (audioActual) audioActual.pause();
   if ('speechSynthesis' in window) speechSynthesis.cancel();
+  S.ocupada = false;
   aplicarModo('dormida');
   ['bOjos','bOidos','bVoz','bPriv'].forEach(i => $(i).classList.remove('on'));
   log('PARADA TOTAL', '#ffb3b3');
@@ -601,12 +642,7 @@ $('enviar').onclick = () => {
 $('escribir').addEventListener('keydown', e => { if (e.key === 'Enter') $('enviar').click(); });
 
 /* ---------- ajustes ---------- */
-function pintarAyudaClave(){
-  $('ayudaClave').textContent = PROVEEDORES[S.proveedor].ayuda;
-}
-function pintarModelos(){
-  $('modelo').value = S.modelo;
-}
+function pintarAyudaClave(){ $('ayudaClave').textContent = PROVEEDORES[S.proveedor].ayuda; }
 function pintarVoces(){
   const sel = $('vozSel'); sel.innerHTML = '';
   if (S.motorVoz === 'ipad'){
@@ -618,7 +654,7 @@ function pintarVoces(){
     vs.forEach(v => {
       const o = document.createElement('option');
       o.value = 'ipad::' + v.name;
-      o.textContent = v.name + ' (' + v.lang + ')' + (v.localService ? ' - en el iPad' : '');
+      o.textContent = v.name + ' (' + v.lang + ')';
       sel.appendChild(o);
     });
     const elegida = vs.find(v => v.name === S.vozIpad) ? S.vozIpad : vs[0].name;
@@ -639,26 +675,55 @@ $('proveedor').onchange = () => {
   S.proveedor = $('proveedor').value;
   S.modelo = PROVEEDORES[S.proveedor].modelos[0];
   $('clave').value = S.claves[S.proveedor] || '';
-  pintarModelos(); pintarAyudaClave(); guardar();
-  log('Proveedor: ' + PROVEEDORES[S.proveedor].nombre);
+  $('modelo').value = S.modelo;
+  pintarAyudaClave(); guardar();
+  log('Proveedor: ' + PROVEEDORES[S.proveedor].nombre + ' / modelo ' + S.modelo);
 };
-$('clave').addEventListener('input', () => {
-  S.claves[S.proveedor] = $('clave').value.trim(); guardar();
-});
-$('claveVoz').addEventListener('input', () => { S.claveVoz = $('claveVoz').value.trim(); guardar(); });
+$('clave').addEventListener('input', () => { S.claves[S.proveedor] = limpia($('clave').value); guardar(); });
+$('claveVoz').addEventListener('input', () => { S.claveVoz = limpia($('claveVoz').value); guardar(); });
 $('modelo').addEventListener('input', () => { S.modelo = $('modelo').value.trim(); guardar(); });
+$('pensar').addEventListener('change', () => { S.pensar = $('pensar').value; guardar(); });
+$('cuota').addEventListener('change', () => { S.cuota = $('cuota').value; guardar(); });
 
 $('verModelos').onclick = async () => {
-  const clave = S.claves[S.proveedor];
+  const clave = limpia(S.claves[S.proveedor]);
   if (!clave){ log('Pon primero la clave', '#ffb98d'); return; }
   log('Mirando modelos de ' + PROVEEDORES[S.proveedor].nombre + '...');
   try{
     const r = await fetch(PROVEEDORES[S.proveedor].base + '/models',
       { headers:{ 'Authorization':'Bearer '+clave } });
-    const j = await r.json();
+    const t = await r.text();
+    if (!r.ok){ log('Error ' + r.status + ': ' + t.slice(0,150), '#ff7a7a'); return; }
+    let j; try{ j = JSON.parse(t); }catch(e){ log('Respuesta: ' + t.slice(0,150), '#ffb98d'); return; }
     const lista = (j.data || j.models || []).map(m => m.id || m.name).filter(Boolean);
-    log('Modelos: ' + lista.slice(0,25).join(' , '), '#7fd6a2');
+    log('Modelos: ' + lista.slice(0,30).join(' , '), '#7fd6a2');
   }catch(e){ log('No pude listar: ' + e.message, '#ff7a7a'); }
+};
+
+$('probarConexion').onclick = async () => {
+  const clave = limpia(S.claves[S.proveedor]);
+  if (!clave){ log('Pon primero la clave', '#ffb98d'); return; }
+  log('Probando ' + PROVEEDORES[S.proveedor].nombre + ' / ' + S.modelo + ' ...');
+  const ctrl = new AbortController();
+  const reloj = setTimeout(() => ctrl.abort(), 25000);
+  const t0 = Date.now();
+  try{
+    const cuerpo = { model:S.modelo, max_tokens:60,
+      messages:[{ role:'user', content:'Responde solo con la palabra: vale' }] };
+    if (S.proveedor === 'gemini') cuerpo.reasoning_effort = S.pensar;
+    const r = await fetch(PROVEEDORES[S.proveedor].base + '/chat/completions', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+clave, 'Content-Type':'application/json' },
+      body: JSON.stringify(cuerpo), signal: ctrl.signal
+    });
+    clearTimeout(reloj);
+    const t = await r.text();
+    log('HTTP ' + r.status + ' en ' + ((Date.now()-t0)/1000).toFixed(1) + ' s', r.ok ? '#7fd6a2' : '#ff7a7a');
+    log('Respuesta: ' + t.slice(0,220), r.ok ? '#7fd6a2' : '#ff7a7a');
+  }catch(e){
+    clearTimeout(reloj);
+    log('Fallo: ' + (e.name === 'AbortError' ? 'tardo mas de 25 s' : e.message), '#ff7a7a');
+  }
 };
 
 $('motorVoz').onchange = () => { S.motorVoz = $('motorVoz').value; pintarVoces(); guardar(); };
@@ -668,10 +733,8 @@ $('vozSel').onchange = () => {
   guardar();
   decir('Hola, soy ' + S.nombre + '. Asi suena mi voz.');
 };
-$('probarVoz').onclick = () => decir('Hola ' + (S.dueno || '') + ', soy ' + S.nombre + '. Asi suena mi voz.');
-$('masVoces').onclick = () => log('Ajustes -> Accesibilidad -> Contenido leido -> Voces -> Espanol -> descarga las Mejoradas. Luego vuelve y toca aqui.', '#ffd9a0');
-
-$('cuota').onchange = () => { S.cuota = $('cuota').value; guardar(); };
+$('probarVoz').onclick = () => decir('Hola' + (S.dueno ? ' ' + S.dueno : '') + ', soy ' + S.nombre + '. Asi suena mi voz.');
+$('masVoces').onclick = () => log('Ajustes -> Accesibilidad -> Lectura y voz -> Voces -> Espanol -> descarga una Mejorada.', '#ffd9a0');
 
 Object.entries({ dueno:'dueno', nombre:'nombre', clavePalabra:'clavePalabra',
   apps:'apps', personalidad:'personalidad' }).forEach(([id, prop]) => {
@@ -691,10 +754,12 @@ $('clave').value = S.claves[S.proveedor] || '';
 $('claveVoz').value = S.claveVoz;
 $('motorVoz').value = S.motorVoz;
 $('cuota').value = S.cuota;
-pintarAyudaClave(); pintarModelos();
+$('pensar').value = S.pensar;
+$('modelo').value = S.modelo;
+pintarAyudaClave();
 if ('speechSynthesis' in window){
   speechSynthesis.onvoiceschanged = pintarVoces;
-  setTimeout(pintarVoces, 300);
+  setTimeout(pintarVoces, 400);
 }
 pintarVoces();
 
@@ -708,6 +773,6 @@ try{
 $('titulo').textContent = S.nombre;
 $('usos').textContent = contadorUsos();
 estado('Dormida'); aplicarModo('dormida');
-log('Vinsi lista. Proveedor: ' + PROVEEDORES[S.proveedor].nombre, '#ffd9a0');
+log('Vinsi lista. Modelo: ' + S.modelo, '#ffd9a0');
 if (!S.claves[S.proveedor]) log('Abre Ajustes y pega tu clave gratis.', '#ffb98d');
 </script>
