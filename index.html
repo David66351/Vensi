@@ -7,7 +7,7 @@
   :root{
     --panel:#1b1312; --panel2:#241917; --linea:#3b2a25;
     --texto:#f7ede7; --suave:#c3aca3; --acento:#ff9d6b; --acento2:#ffd9a0;
-    --ok:#7fd6a2; --mal:#ff7a7a;
+    --tam:84px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{
@@ -44,7 +44,7 @@
   .caja{background:var(--panel);border:1px solid var(--linea);border-radius:16px;padding:12px;margin-bottom:12px}
   .caja h2{font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--suave);margin:0 0 8px}
   #vista{width:100%;border-radius:12px;background:#000;display:block;max-height:190px;object-fit:contain}
-  #log{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--suave);max-height:220px;overflow:auto;white-space:pre-wrap}
+  #log{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--suave);max-height:200px;overflow:auto;white-space:pre-wrap}
   #log b{color:var(--acento2)}
   .fila{display:flex;gap:8px;margin-bottom:10px}
   input,select,textarea{
@@ -57,8 +57,49 @@
   .mini{font-size:12px;padding:9px 12px;border-radius:10px;border:1px solid var(--linea);
     background:var(--panel2);color:var(--acento2);font-weight:600;white-space:nowrap}
   summary{cursor:pointer;font-weight:700;padding:10px 0}
-  .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:99px;background:#2a1c19;color:var(--acento2);border:1px solid var(--linea)}
+  .aviso{
+    position:sticky;top:0;z-index:9;display:flex;align-items:center;gap:10px;
+    background:#4a2a12;border:1px solid #a3612c;color:#ffe0c2;
+    padding:10px 12px;border-radius:12px;margin-bottom:12px;font-size:13px;font-weight:600
+  }
+  .aviso button{
+    margin-left:auto;background:#ff9d6b;color:#2a1208;border:0;
+    padding:9px 14px;border-radius:10px;font-weight:700;font-size:13px
+  }
+
+  /* ---------- modo mini ---------- */
+  body.mini{padding:0;overflow:hidden;background:#0a0706}
+  body.mini > :not(#mini){display:none!important}
+
+  #mini{
+    display:none;position:fixed;right:12px;bottom:16px;z-index:60;
+    width:var(--tam);height:var(--tam);border-radius:50%;
+    align-items:center;justify-content:center;touch-action:none;cursor:grab;
+    background:radial-gradient(circle at 35% 30%,#ffd9a0,#ff8a5c 55%,#7a3b21);
+    box-shadow:0 8px 24px rgba(0,0,0,.55), 0 0 0 3px rgba(255,157,107,.22);
+    transition:box-shadow .3s, filter .3s;
+  }
+  body.mini #mini{display:flex}
+  #mini.dormida{filter:grayscale(.75) brightness(.65)}
+  #mini.viva{animation:latido 1.7s infinite}
+  #mini.pensando{animation:latido .8s infinite}
+  #mini .carita{display:flex;gap:calc(var(--tam) * .12)}
+  #mini .ojo{
+    width:calc(var(--tam) * .11);height:calc(var(--tam) * .14);border-radius:50%;
+    background:#2a1208;animation:parpadeo 5s infinite;
+  }
+  @keyframes parpadeo{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.08)}}
+  #mini .boca{
+    position:absolute;bottom:calc(var(--tam) * .24);width:calc(var(--tam) * .2);
+    height:calc(var(--tam) * .1);border-bottom:2px solid #2a1208;
+    border-radius:0 0 50% 50%;
+  }
 </style>
+
+<div id="aviso" class="aviso" style="display:none">
+  <span>La pantalla se ha cortado</span>
+  <button id="reconectar">Reconectar</button>
+</div>
 
 <div class="cab">
   <div class="orbe" id="orbe"></div>
@@ -69,6 +110,8 @@
   </div>
   <button class="rojo" id="parar">PARAR</button>
 </div>
+
+<div class="fila"><button class="mini" id="bMini">Modo mini</button></div>
 
 <div class="modos" id="modos">
   <button data-modo="dormida">Dormida</button>
@@ -167,6 +210,9 @@
   </select>
   <p class="ayuda">Consultas hechas hoy: <b id="usos">0</b> de 1500</p>
 
+  <label>Tamano de la ventanita</label>
+  <input id="tam" type="range" min="56" max="140" step="4">
+
   <h2 style="margin-top:18px">Ella</h2>
 
   <label>Tu nombre</label>
@@ -187,9 +233,14 @@
   <p class="ayuda">Todo se guarda solo en este iPad.</p>
 </details>
 
+<div id="mini" data-e="dormida">
+  <div class="carita"><div class="ojo"></div><div class="ojo"></div></div>
+  <div class="boca"></div>
+</div>
+
 <script>
 /* ============================ VINSI ============================ */
-const LS = 'vinsi.v3.';
+const LS = 'vinsi.v5.';
 const $  = id => document.getElementById(id);
 
 const PROVEEDORES = {
@@ -281,21 +332,22 @@ const S = {
   voz:          localStorage.getItem(LS+'voz') || 'Valentina',
   velocidad:   +(localStorage.getItem(LS+'velocidad') || 1),
   cuota:        localStorage.getItem(LS+'cuota') || 'ahorro',
+  tam:         +(localStorage.getItem(LS+'tam') || 84),
   dueno:        localStorage.getItem(LS+'dueno') || '',
   nombre:       localStorage.getItem(LS+'nombre') || 'Vinsi',
   clavePalabra: localStorage.getItem(LS+'clavePalabra') || 'vinsi',
   apps:         localStorage.getItem(LS+'apps') || APPS_POR_DEFECTO,
   personalidad: localStorage.getItem(LS+'personalidad') ||
     'Carinosa, calida, cercana y tranquila. Te alegras de verle. Natural, nada empalagosa.',
-  modo:'dormida', ojos:false, oidos:false, voz:true, privado:false,
-  ocupada:false, tInicio:0
+  modo:'dormida', ojos:false, ojosDeseado:false, oidosDeseado:false,
+  voz:true, privado:false, ocupada:false, tInicio:0, mini:false
 };
 
 const guardar = () => {
   localStorage.setItem(LS+'proveedor', S.proveedor);
   localStorage.setItem(LS+'claves', JSON.stringify(S.claves));
   ['claveVoz','modelo','pensar','motorVoz','vozIpad','ttsModel','voz','velocidad',
-   'cuota','dueno','nombre','clavePalabra','apps','personalidad']
+   'cuota','tam','dueno','nombre','clavePalabra','apps','personalidad']
    .forEach(c => localStorage.setItem(LS+c, S[c]));
 };
 
@@ -323,8 +375,57 @@ function log(t, color){
 function estado(txt, tipo){
   $('estado').textContent = txt;
   $('orbe').className = 'orbe' + (tipo === 'viva' ? ' viva' : tipo === 'pensando' ? ' pensando' : '');
+  const m = $('mini');
+  m.dataset.e = tipo || 'quieta';
+  m.className = (S.modo === 'dormida' ? 'dormida ' : '') +
+                (tipo === 'viva' ? 'viva' : tipo === 'pensando' ? 'pensando' : '');
 }
 function libre(){ estado(S.modo === 'dormida' ? 'Dormida' : 'Escuchando'); }
+
+const verAviso = v => { $('aviso').style.display = v ? 'flex' : 'none'; };
+
+/* ---------- modo mini ---------- */
+function entrarMini(){
+  S.mini = true;
+  document.body.classList.add('mini');
+  log('Modo mini: sigo aqui, en pequenito');
+  decir('Vale, me pongo pequeñita. Aqui sigo.');
+}
+function salirMini(){
+  S.mini = false;
+  document.body.classList.remove('mini');
+  $('mini').style.left = $('mini').style.top = '';
+  $('mini').style.right = '12px'; $('mini').style.bottom = '16px';
+  log('Modo mini desactivado');
+}
+$('bMini').onclick = entrarMini;
+
+let miniMovido = false, miniT0 = 0;
+$('mini').addEventListener('pointerdown', e => {
+  miniMovido = false; miniT0 = Date.now();
+  const r = $('mini').getBoundingClientRect();
+  const dx = e.clientX - r.left, dy = e.clientY - r.top;
+  try{ $('mini').setPointerCapture(e.pointerId); }catch(err){}
+  const mover = ev => {
+    if (Math.abs(ev.clientX - (r.left + dx)) > 8 || Math.abs(ev.clientY - (r.top + dy)) > 8) miniMovido = true;
+    $('mini').style.left = (ev.clientX - dx) + 'px';
+    $('mini').style.top  = (ev.clientY - dy) + 'px';
+    $('mini').style.right = 'auto'; $('mini').style.bottom = 'auto';
+  };
+  const soltar = () => {
+    $('mini').removeEventListener('pointermove', mover);
+    $('mini').removeEventListener('pointerup', soltar);
+    if (miniMovido) return;
+    if (Date.now() - miniT0 > 450){
+      S.voz = !S.voz; $('bVoz').classList.toggle('on', S.voz);
+      log('Voz ' + (S.voz ? 'activada' : 'silenciada'));
+      return;
+    }
+    salirMini();
+  };
+  $('mini').addEventListener('pointermove', mover);
+  $('mini').addEventListener('pointerup', soltar);
+});
 
 /* ---------- sus reglas ---------- */
 function sistema(){
@@ -340,6 +441,7 @@ REGLAS QUE NUNCA SE ROMPEN:
 4. En modo ESCUCHA solo respondes si te llaman por tu nombre.
 5. Nunca digas que eres un modelo de lenguaje.
 6. Si te pide apagarte, lo aceptas sin protestar.
+7. En la pantalla puedes verte a ti misma en una franja lateral. Ignoralo.
 
 MODO ACTUAL: ${S.modo.toUpperCase()}
 
@@ -392,8 +494,7 @@ async function cerebro(texto, imagen){
       return null;
     }
     const j = await r.json();
-    const seg = ((Date.now()-t0)/1000).toFixed(1);
-    log('Respuesta en ' + seg + ' s', '#7fd6a2');
+    log('Respuesta en ' + ((Date.now()-t0)/1000).toFixed(1) + ' s', '#7fd6a2');
     return j.choices && j.choices[0] ? j.choices[0].message.content : null;
   }catch(e){
     clearTimeout(reloj);
@@ -455,7 +556,15 @@ async function decir(texto){
 
 /* ---------- sus manos ---------- */
 let salioDeSafari = false;
-document.addEventListener('visibilitychange', () => { if (document.hidden) salioDeSafari = true; });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden){
+    salioDeSafari = true;
+    if (S.modo !== 'dormida') log('A segundo plano: pantalla y micro cortados');
+  } else {
+    log('He vuelto: rearmando');
+    rearmar();
+  }
+});
 
 function abrirEnlace(url, planb){
   if (!url) return;
@@ -488,7 +597,7 @@ async function responder(texto, imagen){
   try{
     const crudo = await cerebro(texto, imagen);
     const res = leerJSON(crudo);
-    if (!res){ return; }
+    if (!res) return;
     if (res.hablar !== false && res.decir) await decir(res.decir);
     if (res.modo && ['dormida','escucha','activa','manosfuera'].includes(res.modo) && res.modo !== S.modo)
       aplicarModo(res.modo);
@@ -500,7 +609,6 @@ async function responder(texto, imagen){
   finally { S.ocupada = false; libre(); }
 }
 
-/* desbloqueo automatico */
 setInterval(() => {
   if (S.ocupada && Date.now() - S.tInicio > 40000){
     S.ocupada = false; libre();
@@ -513,266 +621,32 @@ let streamPantalla = null;
 const video = $('vista');
 const lona = document.createElement('canvas');
 const lctx = lona.getContext('2d');
-const mini = document.createElement('canvas'); mini.width = 32; mini.height = 32;
-const mctx = mini.getContext('2d', { willReadFrequently:true });
+const mini2 = document.createElement('canvas'); mini2.width = 32; mini2.height = 32;
+const mctx = mini2.getContext('2d', { willReadFrequently:true });
 let miniPrev = null, ultimoEnvio = 0;
 
-async function activarOjos(){
-  if (streamPantalla){ apagarOjos(); return; }
+async function encenderOjos(){
+  if (streamPantalla) return true;
   try{
     streamPantalla = await navigator.mediaDevices.getDisplayMedia({ video:{ frameRate:{ ideal:5 } } });
     video.srcObject = streamPantalla;
     await video.play().catch(()=>{});
-    streamPantalla.getVideoTracks()[0].onended = apagarOjos;
-    S.ojos = true; $('bOjos').classList.add('on');
+    streamPantalla.getVideoTracks()[0].onended = () => apagarOjos(true);
+    S.ojos = true; S.ojosDeseado = true; miniPrev = null;
+    $('bOjos').classList.add('on');
+    verAviso(false);
     log('Ojos activados: veo tu pantalla', '#7fd6a2');
-  }catch(e){ log('No pude ver la pantalla: ' + e.message, '#ff7a7a'); }
-}
-function apagarOjos(){
-  if (streamPantalla){ streamPantalla.getTracks().forEach(t => t.stop()); streamPantalla = null; }
-  S.ojos = false; $('bOjos').classList.remove('on'); miniPrev = null;
-  log('Ojos apagados');
-}
-function captura(){
-  const w = Math.min(1000, video.videoWidth || 800);
-  const h = Math.round(w * ((video.videoHeight || 600) / (video.videoWidth || 800)));
-  lona.width = w; lona.height = h;
-  lctx.drawImage(video, 0, 0, w, h);
-  return lona.toDataURL('image/jpeg', 0.62);
-}
-function cambio(){
-  if (!video.videoWidth) return 0;
-  mctx.drawImage(video, 0, 0, 32, 32);
-  const d = mctx.getImageData(0, 0, 32, 32).data;
-  if (!miniPrev){ miniPrev = d; return 99; }
-  let s = 0;
-  for (let i = 0; i < d.length; i += 4) s += Math.abs(d[i] - miniPrev[i]);
-  miniPrev = d;
-  return (s / 1024 / 255) * 100;
-}
-setInterval(() => {
-  if (S.modo === 'dormida' || !S.ojos || S.privado || S.ocupada || !S.claves[S.proveedor]) return;
-  const t = Date.now();
-  const p = PRESETS[S.cuota];
-  if (t - ultimoEnvio < p.intervalo * 1000) return;
-  if (cambio() < p.umbral) return;
-  ultimoEnvio = t;
-  responder('[Estas viendo su pantalla. Responde solo si aporta algo.]', captura());
-}, 1000);
-
-/* ---------- OIDOS ---------- */
-let rec = null, recOn = false, ultimaFrase = '', tFrase = 0;
-
-function arrancarOidos(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR){ log('Sin reconocimiento de voz en este navegador', '#ff7a7a'); return; }
-  rec = new SR();
-  rec.lang = 'es-ES'; rec.continuous = true; rec.interimResults = true;
-  rec.onresult = e => {
-    for (let i = e.resultIndex; i < e.results.length; i++){
-      if (!e.results[i].isFinal) continue;
-      const frase = e.results[i][0].transcript.trim();
-      if (!frase) continue;
-      if (frase === ultimaFrase && Date.now() - tFrase < 2500) continue;
-      ultimaFrase = frase; tFrase = Date.now();
-      procesarFrase(frase);
-    }
-  };
-  rec.onend = () => { if (recOn) setTimeout(() => { try{ rec.start(); }catch(e){} }, 350); };
-  rec.onerror = e => { if (e.error !== 'no-speech') log('Micro: ' + e.error, '#ffb98d'); };
-  try{ rec.start(); recOn = true; log('Oidos activados', '#7fd6a2'); }catch(e){}
-}
-function pararOidos(){
-  recOn = false;
-  if (rec){ try{ rec.stop(); }catch(e){} rec = null; }
-  log('Oidos apagados');
-}
-function procesarFrase(frase){
-  const llama = frase.toLowerCase().includes(S.clavePalabra.toLowerCase());
-  if (S.modo === 'escucha' && !llama){ log('(oyo) ' + frase); return; }
-  const limpiaTxt = llama
-    ? frase.replace(new RegExp(S.clavePalabra, 'i'), '').replace(/^[,\s]+/,'').trim() || frase
-    : frase;
-  log('Tu: ' + frase, '#bdf0d1');
-  responder(limpiaTxt);
-}
-
-/* ---------- MODOS ---------- */
-function aplicarModo(m){
-  S.modo = m;
-  [...document.querySelectorAll('#modos button')].forEach(b =>
-    b.classList.toggle('on', b.dataset.modo === m));
-  if (m === 'dormida'){
-    estado('Dormida'); $('bOidos').classList.remove('on');
-    if (recOn) pararOidos();
-    log('Modo DORMIDA: no oigo ni toco nada');
-  } else {
-    if (!recOn){ arrancarOidos(); $('bOidos').classList.add('on'); }
-    libre();
-    log('Modo ' + m.toUpperCase() + (m === 'manosfuera' ? ': hablo pero no toco nada' : ''));
-  }
-}
-
-/* ---------- botones ---------- */
-$('modos').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (b) aplicarModo(b.dataset.modo);
-});
-$('bOjos').onclick = activarOjos;
-$('bOidos').onclick = () => {
-  if (recOn){ pararOidos(); $('bOidos').classList.remove('on'); }
-  else { arrancarOidos(); $('bOidos').classList.add('on'); }
-};
-$('bVoz').onclick = () => { S.voz = !S.voz; $('bVoz').classList.toggle('on', S.voz);
-  log('Voz ' + (S.voz ? 'activada' : 'silenciada')); };
-$('bPriv').onclick = () => { S.privado = !S.privado; $('bPriv').classList.toggle('on', S.privado);
-  log(S.privado ? 'Modo privado: dejo de mirar' : 'Modo privado desactivado'); };
-$('parar').onclick = () => {
-  apagarOjos(); pararOidos();
-  if (audioActual) audioActual.pause();
-  if ('speechSynthesis' in window) speechSynthesis.cancel();
-  S.ocupada = false;
-  aplicarModo('dormida');
-  ['bOjos','bOidos','bVoz','bPriv'].forEach(i => $(i).classList.remove('on'));
-  log('PARADA TOTAL', '#ffb3b3');
-};
-$('enviar').onclick = () => {
-  const t = $('escribir').value.trim(); if (!t) return;
-  $('escribir').value = ''; log('Tu (escrito): ' + t, '#bdf0d1'); responder(t);
-};
-$('escribir').addEventListener('keydown', e => { if (e.key === 'Enter') $('enviar').click(); });
-
-/* ---------- ajustes ---------- */
-function pintarAyudaClave(){ $('ayudaClave').textContent = PROVEEDORES[S.proveedor].ayuda; }
-function pintarVoces(){
-  const sel = $('vozSel'); sel.innerHTML = '';
-  if (S.motorVoz === 'ipad'){
-    const vs = vocesIpad();
-    if (!vs.length){
-      sel.innerHTML = '<option value="">(aun cargando las voces del iPad)</option>';
-      return;
-    }
-    vs.forEach(v => {
-      const o = document.createElement('option');
-      o.value = 'ipad::' + v.name;
-      o.textContent = v.name + ' (' + v.lang + ')';
-      sel.appendChild(o);
-    });
-    const elegida = vs.find(v => v.name === S.vozIpad) ? S.vozIpad : vs[0].name;
-    S.vozIpad = elegida;
-    sel.value = 'ipad::' + elegida;
-  } else {
-    VOZ_VENICE.forEach(([m, v]) => {
-      const o = document.createElement('option');
-      o.value = m + '::' + v;
-      o.textContent = m.replace('tts-','') + ' - ' + v;
-      sel.appendChild(o);
-    });
-    sel.value = S.ttsModel + '::' + S.voz;
-  }
-}
-
-$('proveedor').onchange = () => {
-  S.proveedor = $('proveedor').value;
-  S.modelo = PROVEEDORES[S.proveedor].modelos[0];
-  $('clave').value = S.claves[S.proveedor] || '';
-  $('modelo').value = S.modelo;
-  pintarAyudaClave(); guardar();
-  log('Proveedor: ' + PROVEEDORES[S.proveedor].nombre + ' / modelo ' + S.modelo);
-};
-$('clave').addEventListener('input', () => { S.claves[S.proveedor] = limpia($('clave').value); guardar(); });
-$('claveVoz').addEventListener('input', () => { S.claveVoz = limpia($('claveVoz').value); guardar(); });
-$('modelo').addEventListener('input', () => { S.modelo = $('modelo').value.trim(); guardar(); });
-$('pensar').addEventListener('change', () => { S.pensar = $('pensar').value; guardar(); });
-$('cuota').addEventListener('change', () => { S.cuota = $('cuota').value; guardar(); });
-
-$('verModelos').onclick = async () => {
-  const clave = limpia(S.claves[S.proveedor]);
-  if (!clave){ log('Pon primero la clave', '#ffb98d'); return; }
-  log('Mirando modelos de ' + PROVEEDORES[S.proveedor].nombre + '...');
-  try{
-    const r = await fetch(PROVEEDORES[S.proveedor].base + '/models',
-      { headers:{ 'Authorization':'Bearer '+clave } });
-    const t = await r.text();
-    if (!r.ok){ log('Error ' + r.status + ': ' + t.slice(0,150), '#ff7a7a'); return; }
-    let j; try{ j = JSON.parse(t); }catch(e){ log('Respuesta: ' + t.slice(0,150), '#ffb98d'); return; }
-    const lista = (j.data || j.models || []).map(m => m.id || m.name).filter(Boolean);
-    log('Modelos: ' + lista.slice(0,30).join(' , '), '#7fd6a2');
-  }catch(e){ log('No pude listar: ' + e.message, '#ff7a7a'); }
-};
-
-$('probarConexion').onclick = async () => {
-  const clave = limpia(S.claves[S.proveedor]);
-  if (!clave){ log('Pon primero la clave', '#ffb98d'); return; }
-  log('Probando ' + PROVEEDORES[S.proveedor].nombre + ' / ' + S.modelo + ' ...');
-  const ctrl = new AbortController();
-  const reloj = setTimeout(() => ctrl.abort(), 25000);
-  const t0 = Date.now();
-  try{
-    const cuerpo = { model:S.modelo, max_tokens:60,
-      messages:[{ role:'user', content:'Responde solo con la palabra: vale' }] };
-    if (S.proveedor === 'gemini') cuerpo.reasoning_effort = S.pensar;
-    const r = await fetch(PROVEEDORES[S.proveedor].base + '/chat/completions', {
-      method:'POST',
-      headers:{ 'Authorization':'Bearer '+clave, 'Content-Type':'application/json' },
-      body: JSON.stringify(cuerpo), signal: ctrl.signal
-    });
-    clearTimeout(reloj);
-    const t = await r.text();
-    log('HTTP ' + r.status + ' en ' + ((Date.now()-t0)/1000).toFixed(1) + ' s', r.ok ? '#7fd6a2' : '#ff7a7a');
-    log('Respuesta: ' + t.slice(0,220), r.ok ? '#7fd6a2' : '#ff7a7a');
+    return true;
   }catch(e){
-    clearTimeout(reloj);
-    log('Fallo: ' + (e.name === 'AbortError' ? 'tardo mas de 25 s' : e.message), '#ff7a7a');
+    log('No pude ver la pantalla: ' + e.message, '#ff7a7a');
+    return false;
   }
-};
-
-$('motorVoz').onchange = () => { S.motorVoz = $('motorVoz').value; pintarVoces(); guardar(); };
-$('vozSel').onchange = () => {
-  const [a, b] = $('vozSel').value.split('::');
-  if (a === 'ipad') S.vozIpad = b; else { S.ttsModel = a; S.voz = b; }
-  guardar();
-  decir('Hola, soy ' + S.nombre + '. Asi suena mi voz.');
-};
-$('probarVoz').onclick = () => decir('Hola' + (S.dueno ? ' ' + S.dueno : '') + ', soy ' + S.nombre + '. Asi suena mi voz.');
-$('masVoces').onclick = () => log('Ajustes -> Accesibilidad -> Lectura y voz -> Voces -> Espanol -> descarga una Mejorada.', '#ffd9a0');
-
-Object.entries({ dueno:'dueno', nombre:'nombre', clavePalabra:'clavePalabra',
-  apps:'apps', personalidad:'personalidad' }).forEach(([id, prop]) => {
-  const el = $(id); el.value = S[prop];
-  el.addEventListener('input', () => {
-    S[prop] = el.value;
-    if (id === 'nombre') $('titulo').textContent = S.nombre;
-    guardar();
-  });
-});
-$('velocidad').value = S.velocidad;
-$('velocidad').addEventListener('input', () => { S.velocidad = +$('velocidad').value; guardar(); });
-
-/* ---------- arranque ---------- */
-$('proveedor').value = S.proveedor;
-$('clave').value = S.claves[S.proveedor] || '';
-$('claveVoz').value = S.claveVoz;
-$('motorVoz').value = S.motorVoz;
-$('cuota').value = S.cuota;
-$('pensar').value = S.pensar;
-$('modelo').value = S.modelo;
-pintarAyudaClave();
-if ('speechSynthesis' in window){
-  speechSynthesis.onvoiceschanged = pintarVoces;
-  setTimeout(pintarVoces, 400);
 }
-pintarVoces();
-
-try{
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator(), gan = ctx.createGain();
-  osc.frequency.value = 40; gan.gain.value = 0.0001;
-  osc.connect(gan).connect(ctx.destination); osc.start();
-}catch(e){}
-
-$('titulo').textContent = S.nombre;
-$('usos').textContent = contadorUsos();
-estado('Dormida'); aplicarModo('dormida');
-log('Vinsi lista. Modelo: ' + S.modelo, '#ffd9a0');
-if (!S.claves[S.proveedor]) log('Abre Ajustes y pega tu clave gratis.', '#ffb98d');
-</script>
+function apagarOjos(auto){
+  if (streamPantalla){ streamPantalla.getTracks().forEach(t => t.stop()); streamPantalla = null; }
+  video.srcObject = null;
+  S.ojos = false; miniPrev = null;
+  $('bOjos').classList.remove('on');
+  if (!auto) S.ojosDeseado = false;
+  log('Ojos apagados');
+  if (auto && S.ojosDeseado &&
