@@ -207,8 +207,8 @@
   <h2 style="margin-top:18px">Su voz</h2>
   <label>Motor de voz</label>
   <select id="motorVoz">
-    <option value="ipad">La voz del iPad - GRATIS, sin internet</option>
-    <option value="venice">Voz de Venice - de pago, mas humana</option>
+    <option value="venice">Voz de Venice - la mas estable (recomendada)</option>
+    <option value="ipad">La voz del iPad - gratis, pero corta el micro y la camara</option>
   </select>
   <label>Clave de Venice (solo si usas su voz)</label>
   <input id="claveVoz" type="password" placeholder="vn-... (opcional)">
@@ -328,24 +328,24 @@ const APPS_POR_DEFECTO = [
   'Calculadora | calc://'
 ].join('\n');
 
-const PRESETS = { ahorro:{intervalo:10,umbral:4}, normal:{intervalo:5,umbral:2.5}, intenso:{intervalo:3,umbral:2} };
-const ESPERA_INICIATIVA = [0, 45000, 25000, 12000];
+const PRESETS = { ahorro:{intervalo:10,umbral:4}, normal:{intervalo:6,umbral:3}, intenso:{intervalo:4,umbral:2} };
+const ESPERA_INICIATIVA = [0, 50000, 30000, 15000];
 
 const hoyISO = () => new Date().toISOString().slice(0,10);
 const limpia = t => (t || '').replace(/\s+/g,'').trim();
 
 const S = {
-  proveedor:    localStorage.getItem(LS+'proveedor') || 'gemini',
+  proveedor:    localStorage.getItem(LS+'proveedor') || 'venice',
   claves:       JSON.parse(localStorage.getItem(LS+'claves') || '{}'),
   claveVoz:     localStorage.getItem(LS+'claveVoz') || '',
-  modelo:       localStorage.getItem(LS+'modelo') || PROVEEDORES.gemini.modelos[0],
+  modelo:       localStorage.getItem(LS+'modelo') || 'qwen3-vl-235b-a22b',
   pensar:       localStorage.getItem(LS+'pensar') || 'minimal',
-  motorVoz:     localStorage.getItem(LS+'motorVoz') || 'ipad',
+  motorVoz:     localStorage.getItem(LS+'motorVoz') || 'venice',
   vozIpad:      localStorage.getItem(LS+'vozIpad') || '',
   ttsModel:     localStorage.getItem(LS+'ttsModel') || 'tts-gradium-v1',
   voz:          localStorage.getItem(LS+'voz') || 'Valentina',
-  velocidad:   +(localStorage.getItem(LS+'velocidad') || 0.95),
-  cuota:        localStorage.getItem(LS+'cuota') || 'ahorro',
+  velocidad:   +(localStorage.getItem(LS+'velocidad') || 1),
+  cuota:        localStorage.getItem(LS+'cuota') || 'normal',
   iniciativa:  +(localStorage.getItem(LS+'iniciativa') || 1),
   ropa:         localStorage.getItem(LS+'ropa') || 'punto',
   camCara:      localStorage.getItem(LS+'camCara') || 'user',
@@ -359,7 +359,7 @@ const S = {
   personalidad: localStorage.getItem(LS+'personalidad') ||
     'Devota, calida y un poco juguetona. Le hablas bajo, cerca. Te importa como esta.',
   modo:'dormida', ojos:false, ojosDeseado:false, oidosDeseado:false, cam:false,
-  voz:true, privado:false, ocupada:false, tInicio:0, ultimaIniciativa:0
+  voz:true, privado:false, ocupada:false, hablando:false, tInicio:0, ultimaIniciativa:0
 };
 
 const guardar = () => {
@@ -547,22 +547,27 @@ function leerJSON(txt){
 
 /* ---------- voz ---------- */
 let audioActual = null;
+
+function decirIpad(texto){
+  if (!('speechSynthesis' in window)) return Promise.resolve();
+  return new Promise(res => {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'es-ES'; u.rate = S.velocidad; u.pitch = 1.06;
+    const v = vocesIpad().find(v => v.name === S.vozIpad);
+    if (v) u.voice = v;
+    u.onend = res; u.onerror = res;
+    setTimeout(res, 15000);
+    speechSynthesis.speak(u);
+  });
+}
 function vocesIpad(){
   if (!('speechSynthesis' in window)) return [];
   return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('es'));
 }
-function decirIpad(texto){
-  if (!('speechSynthesis' in window)) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(texto);
-  u.lang = 'es-ES'; u.rate = S.velocidad; u.pitch = 1.06;
-  const v = vocesIpad().find(v => v.name === S.vozIpad);
-  if (v) u.voice = v;
-  speechSynthesis.speak(u);
-}
 async function decirVenice(texto){
   const clave = limpia(S.claveVoz || S.claves.venice);
-  if (!clave){ decirIpad(texto); return; }
+  if (!clave) return decirIpad(texto);
   try{
     const r = await fetch('https://api.venice.ai/api/v1/audio/speech', {
       method:'POST',
@@ -570,18 +575,30 @@ async function decirVenice(texto){
       body: JSON.stringify({ input:texto, model:S.ttsModel, voice:S.voz,
                              response_format:'mp3', speed:S.velocidad })
     });
-    if (!r.ok){ decirIpad(texto); return; }
+    if (!r.ok){ return decirIpad(texto); }
     const url = URL.createObjectURL(await r.blob());
     if (audioActual){ audioActual.pause(); URL.revokeObjectURL(audioActual.src); }
     audioActual = new Audio(url);
-    audioActual.play().catch(()=>{});
-  }catch(e){ decirIpad(texto); }
+    await new Promise(res => {
+      audioActual.onended = res; audioActual.onerror = res;
+      setTimeout(res, 15000);
+      audioActual.play().catch(res);
+    });
+  }catch(e){ await decirIpad(texto); }
 }
+
 async function decir(texto){
   if (!texto || !S.voz) return;
   log('Vinsi: ' + texto, '#ffd9a0');
-  if (S.motorVoz === 'ipad') decirIpad(texto);
-  else await decirVenice(texto);
+  S.hablando = true;
+  if (recOn) pararOidos();
+  try{
+    if (S.motorVoz === 'ipad') await decirIpad(texto);
+    else await decirVenice(texto);
+  }finally{
+    S.hablando = false;
+    if (S.oidosDeseado && !recOn) setTimeout(() => { arrancarOidos(); $('bOidos').classList.add('on'); }, 250);
+  }
 }
 
 /* ---------- sus manos ---------- */
@@ -616,7 +633,7 @@ function actuar(res){
 
 /* ---------- ciclo ---------- */
 async function responder(texto, imagenes){
-  if (S.ocupada){ log('(aun pensando, espera)', '#ffb98d'); return; }
+  if (S.ocupada || S.hablando){ log('(aun pensando, espera)', '#ffb98d'); return; }
   S.ocupada = true; S.tInicio = Date.now();
   estado('Pensando...', 'pensando'); cara('pensando');
   try{
@@ -638,16 +655,17 @@ async function responder(texto, imagenes){
 }
 
 setInterval(() => {
-  if (S.ocupada && Date.now() - S.tInicio > 40000){
-    S.ocupada = false; libre(); log('Desbloqueada: llevaba 40 s pensando', '#ffb98d');
+  if (S.ocupada && Date.now() - S.tInicio > 45000){
+    S.ocupada = false; S.hablando = false; libre();
+    log('Desbloqueada: llevaba 45 s', '#ffb98d');
   }
 }, 5000);
 
 setInterval(() => {
-  if (S.modo !== 'libre' || S.privado || S.ocupada || !S.ojos) return;
+  if (S.modo !== 'libre' || S.privado || S.ocupada || S.hablando || !S.ojos) return;
   if (!S.claves[S.proveedor] || S.iniciativa === 0) return;
   if (Date.now() - S.ultimaIniciativa < ESPERA_INICIATIVA[S.iniciativa]) return;
-  if (Date.now() - ultimoEnvio < 4000) return;
+  if (Date.now() - ultimoEnvio < 5000) return;
   S.ultimaIniciativa = Date.now();
   responder('[Latido: mirala por tu cuenta. Si hay algo que decir o hacer, hazlo. Si no, hablar=false.]', imagenesAhora());
 }, 5000);
@@ -685,10 +703,10 @@ function apagarCam(){
 }
 function capturaCam(){
   if (!streamCam || !cam.videoWidth) return null;
-  const w = 520, h = Math.round(w * (cam.videoHeight / cam.videoWidth));
+  const w = 480, h = Math.round(w * (cam.videoHeight / cam.videoWidth));
   lonaCam.width = w; lonaCam.height = h;
   lonaCam.getContext('2d').drawImage(cam, 0, 0, w, h);
-  return lonaCam.toDataURL('image/jpeg', 0.6);
+  return lonaCam.toDataURL('image/jpeg', 0.55);
 }
 function imagenesAhora(){
   const arr = [];
@@ -746,11 +764,11 @@ setInterval(() => {
 }, 2000);
 
 function captura(){
-  const w = Math.min(1000, video.videoWidth || 800);
-  const h = Math.round(w * ((video.videoHeight || 600) / (video.videoWidth || 800)));
+  const w = Math.min(760, video.videoWidth || 700);
+  const h = Math.round(w * ((video.videoHeight || 600) / (video.videoWidth || 700)));
   lona.width = w; lona.height = h;
   lctx.drawImage(video, 0, 0, w, h);
-  return lona.toDataURL('image/jpeg', 0.62);
+  return lona.toDataURL('image/jpeg', 0.55);
 }
 function cambio(){
   if (!video.videoWidth) return 0;
@@ -763,7 +781,7 @@ function cambio(){
   return (s / 1024 / 255) * 100;
 }
 setInterval(() => {
-  if (S.modo === 'dormida' || !S.ojos || S.privado || S.ocupada || !S.claves[S.proveedor]) return;
+  if (S.modo === 'dormida' || !S.ojos || S.privado || S.ocupada || S.hablando || !S.claves[S.proveedor]) return;
   const t = Date.now(); const p = PRESETS[S.cuota];
   if (t - ultimoEnvio < p.intervalo * 1000) return;
   if (cambio() < p.umbral) return;
@@ -774,6 +792,7 @@ setInterval(() => {
 /* ---------- OIDOS ---------- */
 let rec = null, recOn = false, ultimaFrase = '', tFrase = 0;
 function arrancarOidos(){
+  if (S.hablando) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR){ log('Sin reconocimiento de voz en este navegador', '#ff7a7a'); return; }
   rec = new SR();
@@ -788,14 +807,13 @@ function arrancarOidos(){
       procesarFrase(frase);
     }
   };
-  rec.onend = () => { if (recOn) setTimeout(() => { try{ rec.start(); }catch(e){} }, 350); };
+  rec.onend = () => { if (recOn && !S.hablando) setTimeout(() => { try{ rec.start(); }catch(e){} }, 400); };
   rec.onerror = e => { if (e.error !== 'no-speech') log('Micro: ' + e.error, '#ffb98d'); };
   try{ rec.start(); recOn = true; log('Oidos activados', '#7fd6a2'); }catch(e){}
 }
 function pararOidos(){
   recOn = false;
-  if (rec){ try{ rec.stop(); }catch(e){} rec = null; }
-  log('Oidos apagados');
+  if (rec){ try{ rec.abort(); }catch(e){} rec = null; }
 }
 function procesarFrase(frase){
   const llama = frase.toLowerCase().includes(S.clavePalabra.toLowerCase());
@@ -819,7 +837,7 @@ function aplicarModo(m){
     verAviso(false); log('Modo DORMIDA: no oigo ni toco nada');
   } else {
     S.oidosDeseado = true;
-    if (!recOn){ arrancarOidos(); $('bOidos').classList.add('on'); }
+    if (!recOn && !S.hablando){ arrancarOidos(); $('bOidos').classList.add('on'); }
     libre();
     log('Modo ' + m.toUpperCase() +
       (m === 'manosfuera' ? ': hablo pero no toco nada' : m === 'libre' ? ': pienso por mi cuenta' : ''));
@@ -850,7 +868,7 @@ $('parar').onclick = () => {
   S.oidosDeseado = false;
   if (audioActual) audioActual.pause();
   if ('speechSynthesis' in window) speechSynthesis.cancel();
-  S.ocupada = false; verAviso(false); pintarCuerpo('neutral');
+  S.ocupada = false; S.hablando = false; verAviso(false); pintarCuerpo('neutral');
   aplicarModo('dormida');
   ['bOjos','bOidos','bVoz','bCam'].forEach(i => $(i).classList.remove('on'));
   log('PARADA TOTAL', '#ffb3b3');
@@ -987,5 +1005,5 @@ $('titulo').textContent = S.nombre;
 $('usos').textContent = contadorUsos();
 estado('Dormida'); aplicarModo('dormida');
 log('Vinsi lista. Modelo: ' + S.modelo, '#ffd9a0');
-if (!S.claves[S.proveedor]) log('Abre Ajustes y pega tu clave gratis.', '#ffb98d');
+if (!S.claves[S.proveedor]) log('Abre Ajustes y pega tu clave.', '#ffb98d');
 </script>
