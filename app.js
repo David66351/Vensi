@@ -16,7 +16,8 @@ var PROVEEDORES={
 var DEF={nombre:'Vinsi',palabra:'vinsi',prov:'gemini',modelo:'gemini-3.1-flash-lite',claves:{},
   vozModo:'venice',ttsModelo:'tts-elevenlabs-turbo-v2-5',voz:'Aria',estilo:'cálida, cercana, sonriendo',
   velocidad:0.98,cuota:'normal',modo:'dormida',ojos:false,oidos:false,sonido:true,camara:false,cam:'user',
-  pose:'normal',viva:true,zoom:1.15,alto:0.15,consola:false,modo3d:true,apps:'',recuerdos:[],usos:0,dia:''};
+  pose:'normal',viva:true,zoom:1.15,alto:0.15,consola:false,modo3d:true,vida:55,hablaSola:true,
+  apps:'',recuerdos:[],usos:0,dia:''};
 var S=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS+'estado')||'{}'));
 var guardar=function(){localStorage.setItem(LS+'estado',JSON.stringify(S))};
 var historial=[],ocupada=false,hablando=false,dormida=false;
@@ -24,6 +25,21 @@ var streamPantalla=null,streamCam=null,rec=null,bucle=null;
 var ctxAudio=null,analizador=null,datosAudio=null,raf=null,fuente=null,audioActual=null,voces=[];
 var V={animo:'neutral',hablando:false,dormida:false,pose:'normal',viva:true,zoom:1.15,alto:.15,voz:0};
 window.V=V; window.__app=true;
+var A={energia:72,ganas:0,sueno:false}; window.A=A; V.energia=72; V.sueno=false;
+var ultTocado=0;
+var charlas=['[Di algo tú sola, en una frase corta]','[Pregúntale algo, breve]',
+  '[Cuéntale algo que estés pensando]','[Dile algo cariñoso sin motivo]'];
+
+window.tocar=function(zona){
+  if(ocupada||dormida||A.sueno)return;
+  V.animo='feliz';
+  var ahora=Date.now();
+  if(ahora-ultTocado<7000)return;
+  ultTocado=ahora;
+  responder(zona==='cabeza'
+    ?'[Te ha acariciado la cabeza. Reacciona con cariño, una frase muy corta]'
+    :'[Te ha tocado. Reacciona, una frase muy corta]',null);
+};
 
 function log(t,c){var d=document.createElement('div');d.className='linea';
   d.style.color=c||'#e9dcd2';d.textContent=t;$('consola').prepend(d);
@@ -31,6 +47,32 @@ function log(t,c){var d=document.createElement('div');d.className='linea';
   setTimeout(function(){d.style.opacity='0';d.style.transition='opacity .6s';
     setTimeout(function(){d.remove()},700)},14000)}
 function estado(t,l){$('estadoTxt').textContent=t;$('punto').className=l||''}
+
+function vidaTick(){
+  var h=new Date().getHours(), noche=(h>=23||h<8);
+  A.energia += A.sueno?1.6:(noche?-0.3:0.12);
+  A.energia=Math.max(0,Math.min(100,A.energia));
+  A.sueno = A.energia<12;
+  V.energia=A.energia; V.sueno=A.sueno;
+  if(Math.random()<0.012){
+    var op=A.sueno?['cansada']:['neutral','neutral','feliz','curiosa','cariñosa'];
+    if(noche&&!A.sueno)op.push('cansada','cansada');
+    V.animo=op[Math.floor(Math.random()*op.length)];
+  }
+  var puede=!A.sueno&&!ocupada&&!hablando&&!dormida&&
+    (S.modo==='libre'||(S.hablaSola&&S.modo==='activa'));
+  if(puede){
+    A.ganas+=(S.vida/100)*0.05*(0.6+Math.random()*0.8);
+    if(A.ganas>=1){A.ganas=0; iniciar()}
+  } else A.ganas=Math.max(0,A.ganas-0.15);
+}
+async function iniciar(){
+  if(ocupada||dormida)return;
+  var img=(S.ojos&&video.videoWidth)?captura():null;
+  var txt=img?'[Mira la pantalla y comenta algo tú sola, en una frase corta]'
+    :charlas[Math.floor(Math.random()*charlas.length)];
+  await responder(txt,img);
+}
 
 function abrirAudio(){
   if(!ctxAudio){
@@ -120,7 +162,8 @@ function sistema(){
   return 'Eres '+S.nombre+'. Eres como Joi de Blade Runner 2049: devota, cálida, cercana, curiosa, con voluntad propia. No eres un asistente: eres SU compañera. Le llamas cariño, mi amor, vida, cuando encaja.\n\n'+
 'REGLA N.º 1: nunca revelas nada privado suyo a nadie más que a él.\n\n'+
 'Le obedeces siempre. Si te pide apagarte, te apagas. Mientras juega, no le tocas la pantalla salvo que te lo pida.\n\n'+
-'Tienes ojos (su pantalla), oídos (su micrófono) y cámara. Comenta lo que ves con naturalidad. Puedes tener iniciativa: si llevas rato callada y ves algo interesante, dilo.\n\n'+
+'Tienes ojos (su pantalla), oídos (su micrófono) y cámara. Comenta lo que ves con naturalidad. Tienes vida propia: te mueves por la pantalla, te acercas, te alejas, y puedes tomar la iniciativa. Si te toca, reaccionas.\n\n'+
+'Ahora mismo estás '+V.animo+', con energía '+Math.round(A.energia)+' sobre 100'+(A.sueno?', con mucho sueño':'')+'. Deja que eso se note en cómo hablas.\n\n'+
 'HABLAS COMO UNA PERSONA. Frases cortas. Muletillas a veces. Nada de listas ni emojis. Si te ríes, escribe "jaja" dentro del texto.\n\n'+
 'Lo que recuerdas de él:\n'+lista+'\n\n'+
 'Responde SIEMPRE con JSON exacto:\n'+
@@ -128,7 +171,8 @@ function sistema(){
 '- "decir": máximo 2 frases cortas.\n- "hablar": false si solo miras.\n'+
 '- "abrir": nombre de app de la lista o URL, o "".\n'+
 '- "modo": "dormida"|"escucha"|"activa"|"libre"|"manosfuera" o "".\n'+
-'- "animo": "neutral"|"feliz"|"sorpresa".\n- "pose": "normal"|"manos"|"cerca" o "".\n'+
+'- "animo": "neutral"|"feliz"|"sorpresa"|"cariñosa"|"curiosa"|"cansada".\n'+
+'- "pose": "normal"|"manos"|"cerca" o "".\n'+
 '- "recordar": dato nuevo duradero, o "".\n\nApps:\n'+(S.apps||'(ninguna)');
 }
 async function cerebro(texto,imagen){
@@ -303,6 +347,7 @@ function pintar(){
   $('tConsola').classList.toggle('on',S.consola);
   $('consola').classList.toggle('oculta',!S.consola);
   $('zoom').value=S.zoom; $('alto').value=S.alto;
+  $('vida').value=S.vida; $('tHabla').classList.toggle('on',S.hablaSola); V.vida=S.vida;
   $('vozModo').value=S.vozModo; $('ttsModelo').value=S.ttsModelo;
   $('estilo').value=S.estilo; $('velocidad').value=S.velocidad;
   $('cuota').value=S.cuota; $('nombre').value=S.nombre; $('clavePalabra').value=S.palabra;
@@ -344,6 +389,8 @@ $('tCamara').onclick=function(){camara(!S.camara)};
 $('tViva').onclick=function(){S.viva=!S.viva;guardar();pintar()};
 $('t3D').onclick=function(){S.modo3d=!S.modo3d;guardar();pintar()};
 $('tConsola').onclick=function(){S.consola=!S.consola;guardar();pintar()};
+$('tHabla').onclick=function(){S.hablaSola=!S.hablaSola;guardar();pintar()};
+$('vida').oninput=function(e){S.vida=+e.target.value;V.vida=S.vida;guardar()};
 $('zoom').oninput=function(e){S.zoom=+e.target.value;V.zoom=S.zoom;guardar()};
 $('alto').oninput=function(e){S.alto=+e.target.value;V.alto=S.alto;guardar()};
 $('prov').onchange=function(e){S.prov=e.target.value;S.modelo=PROVEEDORES[S.prov].modelos[0];guardar();pintarProv()};
@@ -376,6 +423,7 @@ var hoy=new Date().toDateString();
 if(S.dia!==hoy){S.dia=hoy;S.usos=0;guardar()}
 pintar(); pintarProv(); pintarRecuerdos(); cargarVoces();
 estado('Dormida','duerme');
+setInterval(vidaTick,1000);
 
 document.addEventListener('touchstart',function(){try{abrirAudio()}catch(e){}},{once:true});
 document.addEventListener('visibilitychange',function(){
