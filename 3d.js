@@ -64,7 +64,9 @@ try{
     const r={lBrazoZ:1.22+sw, rBrazoZ:-1.22-sw,
       lBrazoX:.08+amp*.1, rBrazoX:.08+amp*.1, lBrazoY:.12, rBrazoY:-.12,
       lAnteY:-.22, rAnteY:.22, lAnteZ:0, rAnteZ:0};
-    if(gesto==='saludo'){
+    if(gesto==='arriba'){ r.lBrazoZ=-.7; r.rBrazoZ=.7; r.lBrazoX=.1; r.rBrazoX=.1;
+      r.lAnteY=-.1; r.rAnteY=.1; }
+    else if(gesto==='saludo'){
       const ola=Math.sin(t*7)*.22;
       r.rBrazoZ=.35+ola; r.rBrazoX=.25; r.rAnteY=.55; r.rAnteZ=-.4;
     } else if(gesto==='pecho'){
@@ -88,10 +90,16 @@ try{
     const dt=Math.min(reloj.getDelta(),.05), t=reloj.elapsedTime;
     if(vrm){
       const viva=V.viva?1:.22, amp=V.voz||0;
-      const sueno=V.sueno, e=V.energia||70;
+      const sueno=V.sueno, acc=V.accion||'';
+
+      if(acc==='acercarse') cercaObj=1;
+      else if(acc==='alejarse') cercaObj=0;
+      else if(acc==='girar') giroObj=(Math.random()*2-1)*.6;
+      else if(acc==='gesto' && !gesto){ gesto=GESTOS[Math.floor(Math.random()*GESTOS.length)]; finGesto=t+2 }
+      else if(acc==='estirarse' && !gesto){ gesto='arriba'; finGesto=t+2.5 }
 
       proxPaseo-=dt;
-      if(!caminando && proxPaseo<=0 && !sueno && viva>0.5 && !V.hablando){
+      if((acc==='pasear'||(!acc && proxPaseo<=0)) && !caminando && !sueno && viva>0.5 && !V.hablando){
         destinoX=(Math.random()*2-1)*0.85; caminando=true;
       }
       if(caminando){
@@ -146,6 +154,8 @@ try{
         if(sueno) b.cabeza.rotation.x+=.22;
         if(V.animo==='cariñosa') b.cabeza.rotation.z+=.08;
         if(reaccion>0) b.cabeza.rotation.x+=.2*reaccion;
+        if(acc==='mirarte'){ b.cabeza.rotation.y*=.2; b.cabeza.rotation.x-=.05 }
+        if(acc==='bostezar'){ b.cabeza.rotation.x-=.18 }
       }
       sigParpadeo-=dt;
       if(sigParpadeo<=0){parpadeo=1;sigParpadeo=2.2+Math.random()*4.5}
@@ -155,7 +165,7 @@ try{
         em.setValue('blink',parpadeo);
         em.setValue('aa',V.hablando?Math.min(1,amp*1.6):0);
         em.setValue('happy',Math.max(V.animo==='feliz'?.55:0,reaccion*.8));
-        em.setValue('relaxed',(V.dormida||sueno||V.animo==='cansada')?.6:0);
+        em.setValue('relaxed',(V.dormida||sueno||V.animo==='cansada'||acc==='bostezar')?.6:0);
         em.setValue('surprised',V.animo==='sorpresa'?.6:0);
       }
       giro+=(giroObj-giro)*.08;
