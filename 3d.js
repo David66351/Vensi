@@ -44,7 +44,9 @@ try{
       b={pecho:g('chest'),cabeza:g('head'),cadera:g('hips'),cuello:g('neck'),
         lBrazo:g('leftUpperArm'),rBrazo:g('rightUpperArm'),
         lAnte:g('leftLowerArm'),rAnte:g('rightLowerArm'),
-        lMano:g('leftHand'),rMano:g('rightHand')};
+        lMano:g('leftHand'),rMano:g('rightHand'),
+        lMuslo:g('leftUpperLeg'),rMuslo:g('rightUpperLeg'),
+        lPantorrilla:g('leftLowerLeg'),rPantorrilla:g('rightLowerLeg')};
       window.__3d=true; $('foto').classList.remove('on'); $('carga').classList.add('oculta');
       break;
     }catch(e){}
@@ -52,6 +54,9 @@ try{
   if(!vrm) fotoOn();
 
   let gesto=null, finGesto=0, proxGesto=5;
+  let panX=0, panObj=0, proxPan=5, cercaObj=0, cerca=0, proxCerca=9;
+  let posX=0, caminando=false, destinoX=0, fasePaso=0, proxPaseo=6, reaccion=0;
+  const rayo=new THREE.Raycaster(), puntero=new THREE.Vector2();
   const GESTOS=['saludo','pecho','pelo','abrir'];
 
   function objetivo(t,viva,amp){
@@ -83,13 +88,39 @@ try{
     const dt=Math.min(reloj.getDelta(),.05), t=reloj.elapsedTime;
     if(vrm){
       const viva=V.viva?1:.22, amp=V.voz||0;
+      const sueno=V.sueno, e=V.energia||70;
+
+      proxPaseo-=dt;
+      if(!caminando && proxPaseo<=0 && !sueno && viva>0.5 && !V.hablando){
+        destinoX=(Math.random()*2-1)*0.85; caminando=true;
+      }
+      if(caminando){
+        const dx=destinoX-posX;
+        if(Math.abs(dx)<0.07){ caminando=false; proxPaseo=(5+Math.random()*8)*(1.5-(V.vida||55)/100) }
+        else posX+=Math.sign(dx)*Math.min(Math.abs(dx),0.42*dt);
+        fasePaso+=dt*7.5;
+      } else fasePaso*=0.9;
+      const ampPaso=caminando?1:0;
+      if(b.lMuslo){
+        b.lMuslo.rotation.x=Math.sin(fasePaso)*.45*ampPaso;
+        b.rMuslo.rotation.x=-Math.sin(fasePaso)*.45*ampPaso;
+        if(b.lPantorrilla){
+          b.lPantorrilla.rotation.x=Math.max(0,-Math.sin(fasePaso))*.55*ampPaso;
+          b.rPantorrilla.rotation.x=Math.max(0,Math.sin(fasePaso))*.55*ampPaso;
+        }
+      }
+
       if(!gesto){ proxGesto-=dt;
-        if(proxGesto<=0 && !V.hablando && !V.dormida && viva>0.5){
-          gesto=GESTOS[Math.floor(Math.random()*GESTOS.length)];
+        if(proxGesto<=0 && !V.hablando && !V.dormida && !sueno && viva>0.5){
+          var lista=(V.animo==='cariñosa')?['pecho','pecho','pelo','saludo']:GESTOS;
+          gesto=lista[Math.floor(Math.random()*lista.length)];
           finGesto=t+2+Math.random()*1.8;
         }
       } else if(t>finGesto){ gesto=null; proxGesto=4+Math.random()*7 }
-      const o=objetivo(t,viva,amp), k=.09;
+
+      const o=objetivo(t,viva,amp);
+      if(caminando){ o.lBrazoX-=Math.sin(fasePaso)*.35; o.rBrazoX+=Math.sin(fasePaso)*.35 }
+      const k=.09;
       if(b.lBrazo){
         b.lBrazo.rotation.z+=(o.lBrazoZ-b.lBrazo.rotation.z)*k;
         b.rBrazo.rotation.z+=(o.rBrazoZ-b.rBrazo.rotation.z)*k;
@@ -104,13 +135,17 @@ try{
           b.rAnte.rotation.z+=(o.rAnteZ-b.rAnte.rotation.z)*k;
         }
       }
-      if(b.pecho) b.pecho.rotation.x=Math.sin(t*1.15)*.03*viva+amp*.05;
+      const lento=sueno?.35:1;
+      if(b.pecho) b.pecho.rotation.x=Math.sin(t*1.15*lento)*.03*viva*(sueno?.5:1)+amp*.05;
       if(b.cadera){ b.cadera.position.x=Math.sin(t*.5)*.014*viva;
         b.cadera.rotation.z=Math.sin(t*.5)*.04*viva; }
       if(b.cabeza){
         b.cabeza.rotation.y=Math.sin(t*.4)*.18*viva+Math.sin(t*1.6)*.02;
         b.cabeza.rotation.x=Math.sin(t*.62)*.055*viva-amp*.04;
         b.cabeza.rotation.z=Math.sin(t*.3)*.055*viva;
+        if(sueno) b.cabeza.rotation.x+=.22;
+        if(V.animo==='cariñosa') b.cabeza.rotation.z+=.08;
+        if(reaccion>0) b.cabeza.rotation.x+=.2*reaccion;
       }
       sigParpadeo-=dt;
       if(sigParpadeo<=0){parpadeo=1;sigParpadeo=2.2+Math.random()*4.5}
@@ -119,17 +154,23 @@ try{
       if(em){
         em.setValue('blink',parpadeo);
         em.setValue('aa',V.hablando?Math.min(1,amp*1.6):0);
-        em.setValue('happy',V.animo==='feliz'?.55:0);
-        em.setValue('relaxed',V.dormida?.55:0);
+        em.setValue('happy',Math.max(V.animo==='feliz'?.55:0,reaccion*.8));
+        em.setValue('relaxed',(V.dormida||sueno||V.animo==='cansada')?.6:0);
         em.setValue('surprised',V.animo==='sorpresa'?.6:0);
       }
       giro+=(giroObj-giro)*.08;
-      vrm.scene.rotation.y=Math.PI+giro;
+      reaccion=Math.max(0,reaccion-dt*.8);
+      vrm.scene.position.x=posX;
+      const mirar=caminando?Math.sign(destinoX-posX)*.5:0;
+      vrm.scene.rotation.y=Math.PI+giro+mirar;
       vrm.update(dt);
     }
-    const z=(V.pose==='cerca'?1.9:2.55)/(V.zoom||1.15);
-    camara.position.set(0,1.42+(V.alto||.15),z);
-    camara.lookAt(0,1.36+(V.alto||.15),0);
+    proxPan-=dt; if(proxPan<=0){panObj=(Math.random()-.5)*.55; proxPan=6+Math.random()*9}
+    proxCerca-=dt; if(proxCerca<=0){cercaObj=Math.random()<.45?1:0; proxCerca=10+Math.random()*12}
+    panX+=(panObj-panX)*.02; cerca+=(cercaObj-cerca)*.02;
+    const z=((V.pose==='cerca'?1.9:2.55)-cerca*.4)/(V.zoom||1.15);
+    camara.position.set(panX+posX*.45,1.42+(V.alto||.15),z);
+    camara.lookAt(posX*.3,1.36+(V.alto||.15),0);
     render.render(escena,camara);
   })();
 
@@ -145,6 +186,21 @@ try{
     arrX=e.touches[0].clientX;
   },{passive:true});
   lienzo.addEventListener('touchend',()=>{arrX=null});
+
+  let tapX=0, tapY=0;
+  lienzo.addEventListener('pointerdown',e=>{tapX=e.clientX;tapY=e.clientY});
+  lienzo.addEventListener('pointerup',e=>{
+    if(!vrm)return;
+    if(Math.abs(e.clientX-tapX)>12||Math.abs(e.clientY-tapY)>12)return;
+    const r=lienzo.getBoundingClientRect();
+    puntero.x=((e.clientX-r.left)/r.width)*2-1;
+    puntero.y=-((e.clientY-r.top)/r.height)*2+1;
+    rayo.setFromCamera(puntero,camara);
+    const hits=rayo.intersectObject(vrm.scene,true);
+    if(!hits.length)return;
+    reaccion=1;
+    if(window.tocar)window.tocar(hits[0].point.y>1.32?'cabeza':'cuerpo');
+  });
 }catch(e){
   fotoOn();
   console.log('3D fuera:',e);
