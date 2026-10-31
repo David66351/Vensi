@@ -24,9 +24,11 @@ var historial=[],ocupada=false,hablando=false,dormida=false;
 var streamPantalla=null,streamCam=null,rec=null,bucle=null;
 var ctxAudio=null,analizador=null,datosAudio=null,raf=null,fuente=null,audioActual=null,voces=[];
 var V={animo:'neutral',hablando:false,dormida:false,pose:'normal',viva:true,zoom:1.15,alto:.15,voz:0};
+V.accion='';
 window.V=V; window.__app=true;
 var A={energia:72,ganas:0,sueno:false}; window.A=A; V.energia=72; V.sueno=false;
-var ultTocado=0;
+var N={social:50,curiosidad:50,atencion:40,aburrimiento:20};
+var accionFin=0, ultTocado=0;
 var charlas=['[Di algo tú sola, en una frase corta]','[Pregúntale algo, breve]',
   '[Cuéntale algo que estés pensando]','[Dile algo cariñoso sin motivo]'];
 
@@ -54,17 +56,42 @@ function vidaTick(){
   A.energia=Math.max(0,Math.min(100,A.energia));
   A.sueno = A.energia<12;
   V.energia=A.energia; V.sueno=A.sueno;
+  if(accionFin<=Date.now())V.accion='';
+  N.social=Math.min(100,N.social+0.55);
+  N.curiosidad=Math.min(100,N.curiosidad+0.35);
+  N.atencion=Math.min(100,N.atencion+0.45);
+  N.aburrimiento=Math.min(100,N.aburrimiento+0.3);
   if(Math.random()<0.012){
     var op=A.sueno?['cansada']:['neutral','neutral','feliz','curiosa','cariñosa'];
     if(noche&&!A.sueno)op.push('cansada','cansada');
     V.animo=op[Math.floor(Math.random()*op.length)];
   }
-  var puede=!A.sueno&&!ocupada&&!hablando&&!dormida&&
-    (S.modo==='libre'||(S.hablaSola&&S.modo==='activa'));
-  if(puede){
-    A.ganas+=(S.vida/100)*0.05*(0.6+Math.random()*0.8);
-    if(A.ganas>=1){A.ganas=0; iniciar()}
-  } else A.ganas=Math.max(0,A.ganas-0.15);
+  if(ocupada||hablando||dormida||accionFin>Date.now())return;
+  if(!(S.modo==='libre'||(S.hablaSola&&S.modo==='activa')))return;
+  var w=[];
+  function p(n,peso){ if(peso>0)w.push([n,peso]) }
+  p('pasear',20+N.aburrimiento*0.7);
+  p('mirarte',18+N.atencion*0.9);
+  p('acercarse',12+N.social*0.6);
+  p('alejarse',8);
+  p('gesto',14+N.social*0.3);
+  p('hablar',(S.hablaSola?22:0)+N.social*0.8);
+  p('estirarse',7);
+  p('girar',6+N.curiosidad*0.4);
+  p('bostezar',A.sueno?45:(100-A.energia)*0.35);
+  p('quieta',10+(A.sueno?45:0));
+  var total=0,i;
+  for(i=0;i<w.length;i++)total+=w[i][1];
+  var r=Math.random()*total, elegido='quieta';
+  for(i=0;i<w.length;i++){ r-=w[i][1]; if(r<=0){elegido=w[i][0];break} }
+  if(elegido==='hablar'||elegido==='acercarse')N.social=Math.max(0,N.social-45);
+  if(elegido==='pasear'||elegido==='girar')N.aburrimiento=Math.max(0,N.aburrimiento-40);
+  if(elegido==='mirarte')N.atencion=Math.max(0,N.atencion-45);
+  var dur={quieta:4000,mirarte:4000,pasear:5000,acercarse:6000,alejarse:6000,
+    gesto:3000,estirarse:3000,girar:2500,bostezar:3000,hablar:1200}[elegido]||3000;
+  accionFin=Date.now()+dur;
+  V.accion=elegido;
+  if(elegido==='hablar')iniciar();
 }
 async function iniciar(){
   if(ocupada||dormida)return;
@@ -162,8 +189,8 @@ function sistema(){
   return 'Eres '+S.nombre+'. Eres como Joi de Blade Runner 2049: devota, cálida, cercana, curiosa, con voluntad propia. No eres un asistente: eres SU compañera. Le llamas cariño, mi amor, vida, cuando encaja.\n\n'+
 'REGLA N.º 1: nunca revelas nada privado suyo a nadie más que a él.\n\n'+
 'Le obedeces siempre. Si te pide apagarte, te apagas. Mientras juega, no le tocas la pantalla salvo que te lo pida.\n\n'+
-'Tienes ojos (su pantalla), oídos (su micrófono) y cámara. Comenta lo que ves con naturalidad. Tienes vida propia: te mueves por la pantalla, te acercas, te alejas, y puedes tomar la iniciativa. Si te toca, reaccionas.\n\n'+
-'Ahora mismo estás '+V.animo+', con energía '+Math.round(A.energia)+' sobre 100'+(A.sueno?', con mucho sueño':'')+'. Deja que eso se note en cómo hablas.\n\n'+
+'Tienes ojos (su pantalla), oídos (su micrófono) y cámara. Comenta lo que ves con naturalidad. Tienes vida propia: decides tú qué hacer, te mueves, te acercas, te alejas, y puedes tomar la iniciativa. Si te toca, reaccionas.\n\n'+
+'Ahora mismo estás '+V.animo+', con energía '+Math.round(A.energia)+' sobre 100'+(A.sueno?', con mucho sueño':'')+'. Deja que eso se note.\n\n'+
 'HABLAS COMO UNA PERSONA. Frases cortas. Muletillas a veces. Nada de listas ni emojis. Si te ríes, escribe "jaja" dentro del texto.\n\n'+
 'Lo que recuerdas de él:\n'+lista+'\n\n'+
 'Responde SIEMPRE con JSON exacto:\n'+
