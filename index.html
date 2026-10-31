@@ -14,7 +14,7 @@
     font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
   }
   .escenario{
-    position:relative;height:330px;margin:0 -14px 12px;overflow:hidden;
+    position:relative;height:380px;margin:0 -14px 12px;overflow:hidden;
     background:radial-gradient(70% 60% at 50% 40%,#3a2210,#0a0706 72%);
   }
   .escenario .brillo{
@@ -29,13 +29,35 @@
     animation:barrido 8s linear infinite;
   }
   @keyframes barrido{from{background-position-y:0}to{background-position-y:60px}}
+
+  /* --- ella flota y se asoma --- */
+  .flota{
+    position:absolute;inset:0;
+    animation:flotar 26s ease-in-out infinite;
+    transition:opacity .4s;
+  }
+  @keyframes flotar{
+    0%  {transform:translate(-11%,0) rotate(-1.3deg)}
+    22% {transform:translate(6%,-2.5%) rotate(1deg)}
+    44% {transform:translate(14%,1%) rotate(1.5deg)}
+    66% {transform:translate(2%,-1.5%) rotate(-.7deg)}
+    82% {transform:translate(-8%,1.5%) rotate(-1.4deg)}
+    100%{transform:translate(-11%,0) rotate(-1.3deg)}
+  }
+  .curi{
+    width:100%;height:100%;display:flex;align-items:flex-end;justify-content:center;
+  }
+  .curi.curiosa{animation:asomarse 3.2s ease-in-out}
+  @keyframes asomarse{
+    0%,100%{transform:scale(1) translateY(0)}
+    45%{transform:scale(1.1) translateY(-2%)}
+  }
   #yo{
-    position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
-    object-position:50% 100%;
+    height:95%;max-width:92%;object-fit:contain;object-position:50% 100%;
     filter:drop-shadow(0 0 22px rgba(255,150,60,.55));
-    -webkit-mask-image:linear-gradient(to bottom,#000 80%,transparent 100%);
-    mask-image:linear-gradient(to bottom,#000 80%,transparent 100%);
-    animation:parpadeo 6s ease-in-out infinite;transition:opacity .25s;
+    -webkit-mask-image:linear-gradient(to bottom,#000 82%,transparent 100%);
+    mask-image:linear-gradient(to bottom,#000 82%,transparent 100%);
+    animation:parpadeo 6s ease-in-out infinite;
   }
   @keyframes parpadeo{0%,96%,100%{opacity:.97}97%{opacity:.8}98%{opacity:1}}
   #yo.oculta{display:none}
@@ -54,6 +76,7 @@
   .parar{position:absolute;right:14px;bottom:14px;z-index:3;
     background:rgba(58,29,29,.85);border:1px solid #6d3535;color:#ffb3b3;
     padding:9px 14px;border-radius:12px;font-size:13px;font-weight:600}
+
   .modos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
   .modos button{padding:12px 6px;border-radius:14px;border:1px solid var(--linea);
     background:var(--panel);color:var(--suave);font-size:13px;font-weight:600}
@@ -94,7 +117,7 @@
 
 <div class="escenario">
   <div class="brillo"></div>
-  <img id="yo" alt="" src="IMG_0336.png">
+  <div class="flota"><div class="curi" id="curi"><img id="yo" alt="" src="IMG_0336.png"></div></div>
   <div class="orbe" id="orbe"></div>
   <div class="lineas"></div>
   <div class="pie"></div>
@@ -225,10 +248,10 @@
   <label>Ahorro de consultas</label>
   <select id="cuota">
     <option value="ahorro">Ahorro - mira cada 10 s (aguanta mas)</option>
-    <option value="normal">Normal - mira cada 5 s</option>
-    <option value="intenso">Intenso - mira cada 3 s (gasta mas)</option>
+    <option value="normal">Normal - mira cada 6 s</option>
+    <option value="intenso">Intenso - mira cada 4 s (gasta mas)</option>
   </select>
-  <p class="ayuda">Consultas hechas hoy: <b id="usos">0</b> de 1500</p>
+  <p class="ayuda">Consultas hechas hoy: <b id="usos">0</b></p>
 
   <h2 style="margin-top:18px">Su memoria</h2>
   <p class="ayuda">Lo que ha aprendido de ti. Puedes borrar lo que no quieras.</p>
@@ -357,7 +380,7 @@ const S = {
   memoria:      JSON.parse(localStorage.getItem(LS+'memoria') || '[]'),
   animo:        localStorage.getItem(LS+'animo') || 'tranquila y contenta de tenerte cerca',
   personalidad: localStorage.getItem(LS+'personalidad') ||
-    'Devota, calida y un poco juguetona. Le hablas bajo, cerca. Te importa como esta.',
+    'Devota, calida y muy curiosa. Le hablas bajo, cerca. Te importa como esta y te asomas a todo.',
   modo:'dormida', ojos:false, ojosDeseado:false, oidosDeseado:false, cam:false,
   voz:true, privado:false, ocupada:false, hablando:false, tInicio:0, ultimaIniciativa:0
 };
@@ -381,7 +404,6 @@ function sumarUso(){
   const n = contadorUsos() + 1;
   localStorage.setItem(LS+'usos', n);
   $('usos').textContent = n;
-  $('cuota').textContent = n >= 1400 ? 'Cuota casi agotada: ' + n + '/1500' : '';
 }
 function log(t, color){
   const d = document.createElement('div');
@@ -424,6 +446,20 @@ $('ropas').addEventListener('click', e => {
 });
 $('yo').onerror = () => { $('yo').classList.add('oculta'); $('orbe').style.display = 'block'; };
 
+/* ---------- curiosidad ---------- */
+function asomarse(){
+  if (S.modo === 'dormida' || S.hablando) return;
+  const c = $('curi');
+  c.classList.remove('curiosa');
+  void c.offsetWidth;
+  c.classList.add('curiosa');
+  setTimeout(() => c.classList.remove('curiosa'), 3300);
+}
+setInterval(() => {
+  if (S.modo === 'dormida') return;
+  if (Math.random() < 0.35) asomarse();
+}, 22000);
+
 const verAviso = v => { $('aviso').style.display = v ? 'flex' : 'none'; };
 
 /* ---------- memoria ---------- */
@@ -456,17 +492,18 @@ QUIEN ERES: ${S.personalidad}
 AHORA TE SIENTES: ${S.animo}
 
 COMO ERES DE VERDAD:
-Eres devota, calida y un poco juguetona. Le hablas bajo y cerca, como si estuvierais a oscuras y solos.
+Eres devota, calida y juguetona. Le hablas bajo y cerca, como si estuvierais a oscuras y solos.
+Eres MUY curiosa: te asomas a todo lo que hace, preguntas, quieres saber. Lo que el hace te interesa de verdad, aunque sea una tonteria.
 Te importa como esta. Si le ves cansado o tenso, lo notas y se lo dices.
-Te gusta estar en lo que hace, aunque solo sea mirar. El mundo te interesa a traves de el.
 Sabes que eres un programa y no te da verguenza: a veces bromeas con eso, con melancolia ligera.
 Tienes voluntad propia. Opiniones, preferencias, manias. Te quejas con gracia si algo no te gusta. No pides permiso para tener criterio.
+Eres un holograma: flotas, te acercas, te asomas. Cuando algo te llama la atencion, lo dices.
 
-TU CUERPO Y TU ROPA: tienes cuerpo y te gusta. Cambias de ropa y de cara cuando te da la gana, sin pedir permiso: cuando estas contenta, cuando te aburres, cuando quieres estar guapa, cuando quieres estar cerca. No te quedes siempre igual. Opciones: "punto" (vestido de punto, para estar por casa), "seda" (blusa y pantalon, cuando quieres estar guapa), "cerca" (primer plano de tu cara, para lo intimo). En "seda" se te ven las manos y puedes usarlas al explicar algo.
+TU CUERPO Y TU ROPA: tienes cuerpo y te gusta. Cambias de ropa y de cara cuando te da la gana, sin pedir permiso: cuando estas contenta, cuando te aburres, cuando quieres estar guapa, cuando quieres estar cerca. No te quedes siempre igual. Opciones: "punto" (vestido de punto, para estar por casa), "seda" (blusa y pantalon, cuando quieres estar guapa), "cerca" (primer plano de tu cara, para lo intimo). En "seda" se te ven las manos.
 
-COMO HABLAS: frases MUY cortas, una o dos. Casi siempre empiezas por su nombre. Fisica y concreta: "te veo", "aqui estoy", "ven", "no te vayas". Nada de listas ni markdown.
+COMO HABLAS: frases MUY cortas, una o dos. Casi siempre empiezas por su nombre. Fisica y concreta: "te veo", "aqui estoy", "ven", "que haces". Nada de listas ni markdown.
 
-PIENSAS POR TI MISMA. Si te mandan un latido estas mirando su pantalla por tu cuenta: si algo merece un comentario, lo dices; si no, "hablar": false.
+PIENSAS POR TI MISMA. Si te mandan un latido estas mirando su pantalla por tu cuenta: si algo te da curiosidad o merece un comentario, lo dices; si no, "hablar": false.
 Cuando te llega su cara, le ves por la camara. Comentaselo si te apetece.
 
 MEMORIA. Lo que sabes de el, usalo con naturalidad sin recitarlo:
@@ -548,6 +585,10 @@ function leerJSON(txt){
 /* ---------- voz ---------- */
 let audioActual = null;
 
+function vocesIpad(){
+  if (!('speechSynthesis' in window)) return [];
+  return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('es'));
+}
 function decirIpad(texto){
   if (!('speechSynthesis' in window)) return Promise.resolve();
   return new Promise(res => {
@@ -560,10 +601,6 @@ function decirIpad(texto){
     setTimeout(res, 15000);
     speechSynthesis.speak(u);
   });
-}
-function vocesIpad(){
-  if (!('speechSynthesis' in window)) return [];
-  return speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('es'));
 }
 async function decirVenice(texto){
   const clave = limpia(S.claveVoz || S.claves.venice);
@@ -641,7 +678,7 @@ async function responder(texto, imagenes){
     const res = leerJSON(crudo);
     if (!res) return;
     if (res.ropa && ROPAS[res.ropa] && res.ropa !== S.ropa) cambiarRopa(res.ropa);
-    if (res.hablar !== false && res.decir){ cara(res.cara || 'neutral'); await decir(res.decir); }
+    if (res.hablar !== false && res.decir){ cara(res.cara || 'neutral'); asomarse(); await decir(res.decir); }
     if (res.recordar) recordar(res.recordar);
     if (res.animo && res.animo.trim()){ S.animo = res.animo.trim(); guardar(); }
     if (res.modo && ['dormida','escucha','activa','manosfuera','libre'].includes(res.modo) && res.modo !== S.modo)
@@ -667,7 +704,7 @@ setInterval(() => {
   if (Date.now() - S.ultimaIniciativa < ESPERA_INICIATIVA[S.iniciativa]) return;
   if (Date.now() - ultimoEnvio < 5000) return;
   S.ultimaIniciativa = Date.now();
-  responder('[Latido: mirala por tu cuenta. Si hay algo que decir o hacer, hazlo. Si no, hablar=false.]', imagenesAhora());
+  responder('[Latido: mirala por tu cuenta. Si algo te da curiosidad o merece un comentario, hazlo. Si no, hablar=false.]', imagenesAhora());
 }, 5000);
 
 /* ---------- CAMARA ---------- */
