@@ -7,6 +7,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0710">
 <title>Vinsi</title>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+"@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.2.0/lib/three-vrm.module.min.js"}}
+</script>
 <style>
   :root{--ambar:#ffb27a;--rosa:#ff8fb0;--fondo:#07050c;--cristal:rgba(24,16,32,.86);
     --linea:rgba(255,190,150,.20);--texto:#f6ece4;--tenue:#b9a6b6}
@@ -18,42 +23,21 @@
   #escena{position:fixed;inset:0;overflow:hidden;
     background:radial-gradient(120% 85% at 50% 82%,#2a1a30 0%,#140d1c 45%,#07050c 100%)}
   #cono{position:absolute;left:50%;bottom:-8%;width:118vw;height:104vh;transform:translateX(-50%);
-    background:radial-gradient(60% 70% at 50% 100%,rgba(255,170,120,.20),rgba(255,120,170,.07) 55%,transparent 78%);
-    filter:blur(18px);pointer-events:none;transition:opacity .3s;opacity:calc(.55 + var(--voz,0)*.9)}
-  #lineas{position:absolute;inset:0;pointer-events:none;opacity:.30;
+    background:radial-gradient(60% 70% at 50% 100%,rgba(255,170,120,.22),rgba(255,120,170,.08) 55%,transparent 78%);
+    filter:blur(18px);pointer-events:none;opacity:calc(.5 + var(--voz,0)*.9)}
+  #lineas{position:absolute;inset:0;pointer-events:none;opacity:.22;
     background:repeating-linear-gradient(to bottom,rgba(255,255,255,.09) 0 1px,transparent 1px 4px);
     animation:barrido 7s linear infinite;mix-blend-mode:screen}
   @keyframes barrido{from{background-position:0 0}to{background-position:0 40px}}
   #vineta{position:absolute;inset:0;pointer-events:none;
-    box-shadow:inset 0 0 22vw rgba(5,3,10,.92);
-    background:radial-gradient(85% 70% at 50% 55%,transparent 45%,rgba(5,3,10,.55) 100%)}
-  #cuerpo{position:absolute;left:50%;bottom:0;height:100%;width:100%;
-    transform:translateX(-50%) scale(calc(1 + var(--voz,0)*.012));
-    animation:balanceo 9s ease-in-out infinite alternate;will-change:transform}
-  @keyframes balanceo{
-    0%{transform:translate(-50%,0) rotate(-.7deg)}
-    50%{transform:translate(-50.6%,-.3%) rotate(.3deg)}
-    100%{transform:translate(-49.4%,-.7%) rotate(.7deg)}}
-  #cuerpo.quieta{animation:none}
-  #escala{height:100%;width:100%;transform:scale(var(--esc,1));transform-origin:50% 100%}
-  #inclina{height:100%;width:100%;transform-origin:50% 100%;transition:transform 1.1s cubic-bezier(.3,1.2,.4,1)}
-  #inclina.asomar{transform:scale(1.06) translateY(-1%) rotate(1.2deg)}
-  #inclina.mirar{transform:rotate(-1.8deg) translateX(-.8%)}
-  .capa{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-    object-position:50% var(--enc,12%);
-    display:block;opacity:0;transition:opacity .55s ease;
-    filter:drop-shadow(0 0 34px rgba(255,160,110,.55)) drop-shadow(0 0 90px rgba(255,110,160,.30))
-      saturate(1.14) contrast(1.06) brightness(calc(1.03 + var(--voz,0)*.10))}
-  .capa.visible{opacity:1}
-  #foto.respira{animation:respirarF 5.5s ease-in-out infinite}
-  @keyframes respirarF{0%,100%{transform:scale(1) translateY(0)}50%{transform:scale(1.012) translateY(-.4%)}}
-  .hablando #foto.respira{animation-duration:1.4s}
-  #boca{position:absolute;left:var(--bx,50%);top:var(--by,24%);width:var(--bw,6.5%);height:var(--bh,2.8%);
-    transform:translate(-50%,-50%) scaleY(calc(.35 + var(--abre,0)*1.9)) scaleX(calc(1 + var(--abre,0)*.18));
-    border-radius:50%;pointer-events:none;opacity:0;transition:opacity .18s;
-    background:radial-gradient(ellipse at 50% 40%,rgba(48,6,16,.92),rgba(120,30,45,.55) 55%,transparent 78%);
-    filter:blur(1.1px);mix-blend-mode:multiply}
-  .hablando #boca{opacity:.9}
+    box-shadow:inset 0 0 22vw rgba(5,3,10,.9);
+    background:radial-gradient(85% 70% at 50% 55%,transparent 45%,rgba(5,3,10,.5) 100%)}
+  canvas#lienzo{position:absolute;inset:0;width:100%;height:100%;display:block;
+    filter:drop-shadow(0 0 40px rgba(255,150,110,.35)) saturate(1.1) contrast(1.05)}
+  #foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;
+    opacity:0;transition:opacity .6s;animation:respirarF 5.5s ease-in-out infinite}
+  #foto.on{opacity:1}
+  @keyframes respirarF{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
   .flot{position:fixed;z-index:30;display:flex;align-items:center;justify-content:center;
     backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     background:rgba(28,18,36,.62);border:1px solid var(--linea);color:var(--texto);
@@ -130,6 +114,9 @@
   .linea{background:rgba(12,8,18,.66);border:1px solid var(--linea);border-radius:9px;padding:7px 10px;
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);line-height:1.4;animation:entrar .3s ease-out}
   @keyframes entrar{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  #carga{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60;
+    background:#07050c;font-size:13px;color:var(--tenue);letter-spacing:.1em;text-transform:uppercase}
+  #carga.oculta{display:none}
   video{display:none}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -137,14 +124,11 @@
 <body>
 <div id="escena">
   <div id="cono"></div>
-  <div id="cuerpo"><div id="escala"><div id="inclina">
-    <video class="capa visible" id="vA" muted loop playsinline autoplay preload="auto"></video>
-    <video class="capa" id="vB" muted playsinline preload="auto"></video>
-    <img class="capa" id="foto" src="IMG_0336.png" alt="">
-    <div id="boca"></div>
-  </div></div></div>
+  <canvas id="lienzo"></canvas>
+  <img id="foto" src="IMG_0336.png" alt="">
   <div id="lineas"></div><div id="vineta"></div>
 </div>
+<div id="carga">Despertando…</div>
 
 <div id="consola" class="oculta"></div>
 <div id="pildora"><div id="punto"></div><span id="estadoTxt">Dormida</span></div>
@@ -162,7 +146,6 @@
   </div>
   <div style="height:8px"></div>
   <button class="b" data-modo="manosfuera">Manos fuera (habla, no toca nada)</button>
-  <p class="ayuda">Escucha solo responde a su palabra. Activa responde a todo. Libre lleva la iniciativa sola.</p>
 
   <h2>Sentidos</h2>
   <div class="op"><span>Ojos<small>Ver tu pantalla</small></span><button class="inter" id="tOjos"></button></div>
@@ -173,9 +156,559 @@
 
   <h2>Su cuerpo</h2>
   <div class="rejilla3">
-    <button class="b" data-ropa="punto">Punto</button>
-    <button class="b" data-ropa="seda">Seda</button>
-    <button class="b" data-ropa="cerca">Primer plano</button>
+    <button class="b" data-pose="normal">Suelta</button>
+    <button class="b" data-pose="manos">Manos</button>
+    <button class="b" data-pose="cerca">Primer plano</button>
   </div>
-  <div class="op" style="margin-top:10px"><span>Movimiento<small>Que se mueva y respire</small></span><button class="inter" id="tFlotar"></button></div>
-  <label>Tamaño</label><input type="range" id="escala" min="0.6" max="1
+  <div class="op" style="margin-top:10px"><span>Viva<small>Que respire y se mueva</small></span><button class="inter" id="tViva"></button></div>
+  <label>Tamaño</label><input type="range" id="zoom" min="0.6" max="2" step="0.02">
+  <label>Altura</label><input type="range" id="alto" min="-0.4" max="0.8" step="0.01">
+  <div class="op" style="margin-top:10px"><span>Texto en pantalla</span><button class="inter" id="tConsola"></button></div>
+
+  <h2>Cerebro</h2>
+  <label>Proveedor</label><select id="prov"></select>
+  <label>Modelo</label><select id="modelo"></select>
+  <label>Clave</label><input id="clave" type="password" placeholder="Tu clave">
+  <p class="ayuda" id="ayudaProv"></p>
+  <label>Cuota de miradas</label>
+  <select id="cuota">
+    <option value="ahorro">Ahorro - cada 11 s</option>
+    <option value="normal">Normal - cada 6 s</option>
+    <option value="intenso">Intenso - cada 3,5 s</option>
+  </select>
+  <p class="ayuda">Consultas hoy: <b id="usos">0</b></p>
+
+  <h2>Su voz</h2>
+  <select id="vozModo">
+    <option value="venice">Voz de Venice (humana, de pago)</option>
+    <option value="ipad">Voz del iPad (gratis)</option>
+  </select>
+  <label>Modelo de voz</label><select id="ttsModelo"></select>
+  <label>Voz</label><select id="vozSel"></select>
+  <label>Estilo al hablar</label><input id="estilo" placeholder="cálida, cercana, sonriendo">
+  <label>Velocidad</label><input type="range" id="velocidad" min="0.8" max="1.15" step="0.02">
+  <div class="fila"><button class="mini" id="probarVoz">Probar</button></div>
+
+  <h2>Su memoria</h2>
+  <div class="recuerdos" id="recuerdos"></div>
+  <div class="fila"><input id="nuevoRecuerdo" placeholder="Enséñale algo de ti..."><button class="mini" id="addRecuerdo">Añadir</button></div>
+
+  <h2>Ella</h2>
+  <label>Su nombre</label><input id="nombre" placeholder="Vinsi">
+  <label>Palabra para llamarla</label><input id="clavePalabra" placeholder="vinsi">
+  <label>Apps que puede abrir (nombre | enlace | plan B)</label><textarea id="apps"></textarea>
+
+  <h2>Todo</h2>
+  <button class="b peligro" id="borrar" style="margin-top:6px">Borrar claves y memoria</button>
+</div>
+
+<video id="vista" playsinline muted></video>
+<video id="cam" playsinline muted autoplay></video>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+
+const LS='vinsi.v9.';
+const $=id=>document.getElementById(id);
+const TTS={
+  'tts-elevenlabs-turbo-v2-5':{n:'ElevenLabs (muy humana)',v:['Aria','Rachel','Charlotte','Sarah','Alice']},
+  'tts-minimax-speech-02-hd':{n:'MiniMax (dulce)',v:['WiseWoman','SweetGirl','CalmWoman']},
+  'tts-inworld-1-5-max':{n:'Inworld (cercana)',v:['Ashley','Serena','Olivia']},
+  'tts-gradium-v1':{n:'Gradium (castellano)',v:['Valentina','Mia','Emma']}};
+const PROVEEDORES={
+  gemini:{nombre:'Google Gemini',base:'https://generativelanguage.googleapis.com/v1beta/openai',
+    modelos:['gemini-3.1-flash-lite','gemini-3.5-flash-lite','gemini-3.8-flash','gemini-2.5-flash-lite'],
+    ayuda:'Clave gratis en aistudio.google.com/apikey.'},
+  groq:{nombre:'Groq',base:'https://api.groq.com/openai/v1',
+    modelos:['meta-llama/llama-4-scout-17b-16e-instruct'],ayuda:'Clave gratis en console.groq.com/keys.'},
+  venice:{nombre:'Venice',base:'https://api.venice.ai/api/v1',
+    modelos:['qwen3-vl-235b-a22b','e2ee-qwen3-vl-30b-a3b-p'],ayuda:'Clave en venice.ai/settings/api-keys.'}};
+const DEF={nombre:'Vinsi',palabra:'vinsi',prov:'gemini',modelo:'gemini-3.1-flash-lite',claves:{},
+  vozModo:'venice',ttsModelo:'tts-elevenlabs-turbo-v2-5',voz:'Aria',estilo:'cálida, cercana, sonriendo',
+  velocidad:0.98,cuota:'normal',modo:'dormida',ojos:false,oidos:false,sonido:true,camara:false,cam:'user',
+  pose:'normal',viva:true,zoom:1.15,alto:0.15,consola:false,apps:'',recuerdos:[],usos:0,dia:''};
+let S=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS+'estado')||'{}'));
+const guardar=()=>localStorage.setItem(LS+'estado',JSON.stringify(S));
+let historial=[],ocupada=false,hablando=false,dormida=false,animo='neutral';
+let streamPantalla=null,streamCam=null,rec=null,bucle=null,curioso=null;
+let ctxAudio=null,analizador=null,datosAudio=null,raf=null,fuente=null,audioActual=null,voces=[];
+
+function log(t,c){const d=document.createElement('div');d.className='linea';
+  d.style.color=c||'#e9dcd2';d.textContent=t;$('consola').prepend(d);
+  while($('consola').children.length>5)$('consola').lastChild.remove();
+  setTimeout(()=>{d.style.opacity='0';d.style.transition='opacity .6s';setTimeout(()=>d.remove(),700)},14000)}
+function estado(t,l){$('estadoTxt').textContent=t;$('punto').className=l||''}
+
+/* ================= 3D ================= */
+const lienzo=$('lienzo');
+const render=new THREE.WebGLRenderer({canvas:lienzo,alpha:true,antialias:true});
+render.setPixelRatio(Math.min(devicePixelRatio,2));
+render.setSize(innerWidth,innerHeight,false);
+render.outputColorSpace=THREE.SRGBColorSpace;
+const escena=new THREE.Scene();
+const camara=new THREE.PerspectiveCamera(32,innerWidth/innerHeight,.1,20);
+escena.add(new THREE.HemisphereLight(0xffd9c0,0x241a30,1.5));
+const foco=new THREE.DirectionalLight(0xfff0e0,1.5); foco.position.set(1.4,2.4,2); escena.add(foco);
+const borde=new THREE.DirectionalLight(0xff8fb0,1.1); borde.position.set(-1.8,1.4,-1.6); escena.add(borde);
+const relleno=new THREE.DirectionalLight(0x9fc6ff,.5); relleno.position.set(-1,1,2); escena.add(relleno);
+
+let vrm=null, huesos={}, giro=0, giroObj=0, parpadeo=0, sigParpadeo=2;
+
+const MODELOS=[
+ 'https://cdn.jsdelivr.net/gh/madjin/vrm-samples@master/vroid/stable/AvatarSample_B.vrm',
+ 'https://cdn.jsdelivr.net/gh/madjin/vrm-samples@master/vroid/stable/AvatarSample_A.vrm',
+ 'https://cdn.jsdelivr.net/gh/madjin/vrm-samples@master/vroid/fem_vroid.vrm',
+ 'https://cdn.jsdelivr.net/gh/pixiv/three-vrm@dev/packages/three-vrm/examples/models/VRM1_Constraint_Twist_Sample.vrm'
+];
+const loader=new GLTFLoader();
+loader.register(p=>new VRMLoaderPlugin(p));
+
+async function cargar(){
+  for(const url of MODELOS){
+    try{
+      const gltf=await loader.loadAsync(url);
+      vrm=gltf.userData.vrm;
+      if(!vrm)continue;
+      VRMUtils.removeUnnecessaryVertices(gltf.scene);
+      VRMUtils.combineSkeletons(gltf.scene);
+      vrm.scene.rotation.y=Math.PI;
+      vrm.scene.traverse(o=>{o.frustumCulled=false});
+      escena.add(vrm.scene);
+      if(vrm.lookAt)vrm.lookAt.target=new THREE.Object3D();
+      const g=n=>vrm.humanoid.getNormalizedBoneNode(n);
+      huesos={pecho:g('chest'),cabeza:g('head'),cuello:g('neck'),cadera:g('hips'),
+        lBrazo:g('leftUpperArm'),rBrazo:g('rightUpperArm'),
+        lAnte:g('leftLowerArm'),rAnte:g('rightLowerArm'),lMano:g('leftHand'),rMano:g('rightHand')};
+      $('carga').classList.add('oculta');
+      log('Cuerpo 3D cargado','#7fd6a2');
+      return true;
+    }catch(e){ log('No pude cargar un modelo, pruebo otro','#ffb98d') }
+  }
+  $('foto').classList.add('on'); $('carga').classList.add('oculta');
+  log('Sin 3D: uso su foto','#ff7a7a');
+  return false;
+}
+
+const reloj=new THREE.Clock();
+function bucle3D(){
+  requestAnimationFrame(bucle3D);
+  const dt=Math.min(reloj.getDelta(),.05), t=reloj.elapsedTime;
+  if(vrm){
+    const viva=S.viva?1:.25;
+    const amp=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--voz'))||0;
+    if(huesos.pecho)huesos.pecho.rotation.x=Math.sin(t*1.1)*.028*viva+amp*.05;
+    if(huesos.cadera){huesos.cadera.position.x=Math.sin(t*.55)*.012*viva;
+      huesos.cadera.rotation.z=Math.sin(t*.55)*.035*viva}
+    if(huesos.cabeza){
+      huesos.cabeza.rotation.y=Math.sin(t*.42)*.16*viva+Math.sin(t*1.7)*.02;
+      huesos.cabeza.rotation.x=Math.sin(t*.63)*.05*viva-amp*.04;
+      huesos.cabeza.rotation.z=Math.sin(t*.31)*.05*viva;
+    }
+    const pose=S.pose;
+    if(huesos.lBrazo&&huesos.rBrazo){
+      const gs=pose==='manos'?1:0;
+      const sw=Math.sin(t*.8)*.04*viva;
+      huesos.lBrazo.rotation.z=(-1.15-gs*.35)+sw;
+      huesos.rBrazo.rotation.z=(1.15+gs*.35)-sw;
+      huesos.lBrazo.rotation.x=.1+amp*.15;
+      huesos.rBrazo.rotation.x=.1+amp*.15;
+      if(huesos.lAnte)huesos.lAnte.rotation.z=-.25-gs*.9;
+      if(huesos.rAnte)huesos.rAnte.rotation.z=.25+gs*.9;
+    }
+    sigParpadeo-=dt;
+    if(sigParpadeo<=0){parpadeo=1;sigParpadeo=2.2+Math.random()*4}
+    parpadeo=Math.max(0,parpadeo-dt*5.5);
+    const em=vrm.expressionManager;
+    if(em){
+      em.setValue('blink',parpadeo);
+      em.setValue('aa',hablando?Math.min(1,amp*1.5):0);
+      em.setValue('happy',animo==='feliz'?.55:0);
+      em.setValue('relaxed',dormida?.6:0);
+      em.setValue('surprised',animo==='sorpresa'?.6:0);
+    }
+    giro+=(giroObj-giro)*.08;
+    vrm.scene.rotation.y=Math.PI+giro;
+    vrm.update(dt);
+  }
+  const alto=S.alto, z=2.9/S.zoom;
+  camara.position.set(0,1.35+alto,z);
+  camara.lookAt(0,1.3+alto,0);
+  render.render(escena,camara);
+}
+addEventListener('resize',()=>{
+  camara.aspect=innerWidth/innerHeight; camara.updateProjectionMatrix();
+  render.setSize(innerWidth,innerHeight,false);
+});
+let arrX=null;
+lienzo.addEventListener('touchstart',e=>{arrX=e.touches[0].clientX});
+lienzo.addEventListener('touchmove',e=>{
+  if(arrX===null)return;
+  giroObj=Math.max(-.7,Math.min(.7,giroObj+(e.touches[0].clientX-arrX)*.006));
+  arrX=e.touches[0].clientX;
+},{passive:true});
+lienzo.addEventListener('touchend',()=>{arrX=null});
+
+/* ================= voz ================= */
+function abrirAudio(){
+  if(!ctxAudio){
+    ctxAudio=new (window.AudioContext||window.webkitAudioContext)();
+    analizador=ctxAudio.createAnalyser(); analizador.fftSize=512;
+    datosAudio=new Uint8Array(analizador.fftSize);
+    fuente=ctxAudio.createMediaElementSource(audioActual);
+    fuente.connect(analizador); analizador.connect(ctxAudio.destination);
+  }
+  if(ctxAudio.state==='suspended')ctxAudio.resume();
+}
+function medirVoz(){
+  cancelAnimationFrame(raf);
+  const paso=()=>{
+    let v=0;
+    if(analizador){
+      analizador.getByteTimeDomainData(datosAudio);
+      let s=0;
+      for(let i=0;i<datosAudio.length;i++){const x=(datosAudio[i]-128)/128;s+=x*x}
+      v=Math.min(1,Math.sqrt(s/datosAudio.length)*5.2);
+    } else v=.3+Math.abs(Math.sin(performance.now()/95))*.5*(.5+Math.random()*.5);
+    document.documentElement.style.setProperty('--voz',(v*.8).toFixed(3));
+    if(hablando)raf=requestAnimationFrame(paso);
+    else document.documentElement.style.setProperty('--voz',0);
+  };
+  raf=requestAnimationFrame(paso);
+}
+function cargarVoces(){
+  const sel=$('vozSel'); sel.innerHTML='';
+  if(S.vozModo==='venice'){
+    (TTS[S.ttsModelo]||TTS['tts-elevenlabs-turbo-v2-5']).v.forEach(v=>{
+      const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o)});
+    if(!sel.value)sel.value=S.voz;
+  }else{
+    voces=(speechSynthesis.getVoices()||[]).filter(v=>/^es/i.test(v.lang));
+    if(!voces.length){sel.innerHTML='<option value="">(sin voces en español)</option>';return}
+    voces.forEach(v=>{const o=document.createElement('option');o.value=v.name;
+      o.textContent=v.name+' — '+v.lang;sel.appendChild(o)});
+    if(S.voz)sel.value=S.voz;
+  }
+}
+if(window.speechSynthesis){speechSynthesis.onvoiceschanged=cargarVoces;setTimeout(cargarVoces,400)}
+
+async function decir(texto,estilo){
+  if(!texto||!S.sonido)return;
+  log(S.nombre+': '+texto,'#ffd9a0');
+  hablando=true; pausarOidos();
+  const dicho=texto.replace(/\s+/g,' ').replace(/\.\.\./g,'…').trim();
+  try{
+    if(S.vozModo==='venice'&&S.claves.venice){
+      const cpo={input:dicho,model:S.ttsModelo,voice:S.voz||'Aria',response_format:'mp3',speed:S.velocidad};
+      const r=await fetch('https://api.venice.ai/api/v1/audio/speech',{method:'POST',
+        headers:{'Authorization':'Bearer '+S.claves.venice,'Content-Type':'application/json'},
+        body:JSON.stringify(cpo)});
+      if(r.ok){
+        const url=URL.createObjectURL(await r.blob());
+        await new Promise(res=>{
+          if(audioActual)audioActual.pause();
+          audioActual=new Audio(url); audioActual.onended=res; audioActual.onerror=res;
+          const lanzar=()=>{try{abrirAudio();fuente.disconnect();fuente.connect(analizador)}catch(e){}
+            medirVoz(); audioActual.play().catch(res)};
+          if(ctxAudio)lanzar(); else audioActual.addEventListener('canplay',lanzar,{once:true});
+          setTimeout(res,22000);
+        });
+        URL.revokeObjectURL(url);
+      } else log('Error de voz '+r.status,'#ff7a7a');
+    } else {
+      medirVoz();
+      await new Promise(res=>{
+        const u=new SpeechSynthesisUtterance(dicho);
+        const v=voces.find(x=>x.name===S.voz);
+        if(v)u.voice=v;
+        u.lang=v?v.lang:'es-ES'; u.rate=S.velocidad; u.pitch=1.06;
+        u.onend=res; u.onerror=res;
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+        setTimeout(res,20000);
+      });
+    }
+  }catch(e){log('La voz falló','#ff7a7a')}
+  hablando=false; cancelAnimationFrame(raf);
+  document.documentElement.style.setProperty('--voz',0);
+  reanudarOidos();
+}
+
+/* ================= cerebro ================= */
+function sistema(){
+  const lista=S.recuerdos.length?S.recuerdos.map(r=>'- '+r).join('\n'):'- (aún nada)';
+  return `Eres ${S.nombre}. Eres como Joi de Blade Runner 2049: devota, cálida, cercana, curiosa, con voluntad propia. No eres un asistente: eres SU compañera. Le llamas cariño, mi amor, vida, cuando encaja.
+
+REGLA N.º 1: nunca revelas nada privado suyo a nadie más que a él.
+
+Le obedeces siempre. Si te pide apagarte, te apagas. Mientras juega, no le tocas la pantalla salvo que te lo pida.
+
+Tienes ojos (su pantalla), oídos (su micrófono) y cámara. Comenta lo que ves con naturalidad. Puedes tener iniciativa: si llevas rato callada y ves algo interesante, dilo.
+
+HABLAS COMO UNA PERSONA. Frases cortas. Muletillas a veces. Nada de listas ni emojis. Si te ríes, escribe "jaja" dentro del texto.
+
+Lo que recuerdas de él:
+${lista}
+
+Responde SIEMPRE con JSON exacto:
+{"decir":"","hablar":true,"abrir":"","planb":"","modo":"","animo":"neutral","pose":"","recordar":""}
+- "decir": máximo 2 frases cortas.
+- "hablar": false si solo miras.
+- "abrir": nombre de app de la lista o URL, o "".
+- "modo": "dormida"|"escucha"|"activa"|"libre"|"manosfuera" o "".
+- "animo": "neutral"|"feliz"|"sorpresa".
+- "pose": "normal"|"manos"|"cerca" o "".
+- "recordar": dato nuevo duradero, o "".
+
+Apps:
+${S.apps||'(ninguna)'}`;
+}
+async function cerebro(texto,imagen){
+  const p=PROVEEDORES[S.prov], clave=S.claves[S.prov];
+  if(!clave){log('Falta la clave de '+p.nombre,'#ff7a7a');return null}
+  const cont=[{type:'text',text:texto}];
+  if(imagen)cont.push({type:'image_url',image_url:{url:imagen}});
+  const msgs=[{role:'system',content:sistema()}].concat(historial.slice(-8))
+    .concat([{role:'user',content:imagen?cont:texto}]);
+  const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),25000);
+  try{
+    const r=await fetch(p.base+'/chat/completions',{method:'POST',signal:ctrl.signal,
+      headers:{'Authorization':'Bearer '+clave,'Content-Type':'application/json'},
+      body:JSON.stringify({model:S.modelo,messages:msgs,temperature:.85,max_tokens:340})});
+    clearTimeout(t);
+    if(!r.ok){log('Error '+r.status,'#ff7a7a');return null}
+    const j=await r.json();
+    return j.choices&&j.choices[0]?j.choices[0].message.content:null;
+  }catch(e){clearTimeout(t);log('Sin respuesta','#ff7a7a');return null}
+}
+function leerJSON(t){
+  if(!t)return null;
+  let x=t.trim().replace(/^```(json)?/i,'').replace(/```$/,'').trim();
+  const a=x.indexOf('{'),b=x.lastIndexOf('}');
+  if(a>=0&&b>a)x=x.slice(a,b+1);
+  try{return JSON.parse(x)}catch(e){return{decir:t,hablar:true,animo:'neutral'}}
+}
+
+/* ================= ojos / oídos / cámara ================= */
+const video=$('vista');
+const lona=document.createElement('canvas'), lctx=lona.getContext('2d');
+const mini=document.createElement('canvas'); mini.width=30; mini.height=30;
+const mctx=mini.getContext('2d',{willReadFrequently:true});
+let firmaPrev=null;
+async function ojos(on){
+  if(on){
+    if(streamPantalla)return;
+    try{
+      streamPantalla=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:5}}});
+      video.srcObject=streamPantalla; await video.play().catch(()=>{});
+      streamPantalla.getVideoTracks()[0].onended=()=>{S.ojos=false;guardar();pintar();log('Se cerró la pantalla','#ffb98d')};
+      S.ojos=true; guardar(); pintar(); log('Ojos abiertos','#7fd6a2'); arrancarBucle();
+    }catch(e){S.ojos=false;guardar();pintar();log('Sin permiso de pantalla','#ff7a7a')}
+  }else{
+    if(streamPantalla){streamPantalla.getTracks().forEach(t=>t.stop());streamPantalla=null}
+    video.srcObject=null; S.ojos=false; guardar(); pintar(); pararBucle();
+  }
+}
+function firma(){
+  if(!video.videoWidth)return null;
+  mctx.drawImage(video,0,0,30,30);
+  const d=mctx.getImageData(0,0,30,30).data; let h=0;
+  for(let i=0;i<d.length;i+=8)h=(h*31+d[i])%1000003;
+  return h;
+}
+function captura(){
+  if(!video.videoWidth)return null;
+  const an=Math.min(1000,video.videoWidth);
+  const al=Math.round(video.videoHeight*(an/video.videoWidth));
+  lona.width=an; lona.height=al; lctx.drawImage(video,0,0,an,al);
+  return lona.toDataURL('image/jpeg',.62);
+}
+const intervalo=()=>({ahorro:11000,normal:6000,intenso:3500}[S.cuota]||6000);
+function arrancarBucle(){
+  pararBucle(); if(!S.ojos)return;
+  bucle=setInterval(async()=>{
+    if(dormida||ocupada||hablando||!S.ojos)return;
+    const f=firma(); if(f===null||f===firmaPrev)return;
+    firmaPrev=f;
+    const img=captura();
+    if(img)responder('[Mira mi pantalla. Comenta en una frase si hay algo, si no hablar:false]',img);
+  },intervalo());
+}
+function pararBucle(){clearInterval(bucle);bucle=null}
+
+function pausarOidos(){if(rec){try{rec.stop()}catch(e){}rec=null}}
+function reanudarOidos(){if(S.oidos&&!dormida)setTimeout(escuchar,500)}
+function escuchar(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){log('Sin micrófono en este Safari','#ff7a7a');return}
+  if(rec)return;
+  const r=new SR(); r.lang='es-ES'; r.continuous=true; r.interimResults=true;
+  r.onresult=e=>{
+    const u=e.results[e.results.length-1]; if(!u.final)return;
+    let t=u[0].transcript.trim(); if(!t)return;
+    if(S.modo==='escucha'){
+      const p=S.palabra.toLowerCase();
+      if(!t.toLowerCase().includes(p))return;
+      t=t.replace(new RegExp(p,'i'),'').replace(/^[,\s]+/,'').trim();
+      if(!t){decir('¿Sí, mi amor?');return}
+    }
+    if(dormida)return;
+    responder(t,null);
+  };
+  r.onerror=e=>{if(e.error!=='no-speech')log('Micrófono: '+e.error,'#ffb98d')};
+  r.onend=()=>{rec=null;if(S.oidos&&!dormida)setTimeout(escuchar,350)};
+  try{r.start();rec=r}catch(e){rec=null}
+}
+function oidos(on){
+  S.oidos=on; guardar();
+  if(on){escuchar();log('Oídos abiertos')}else{if(rec){rec.onend=null;rec.stop()}rec=null}
+  pintar();
+}
+async function camara(on){
+  if(on){
+    try{
+      streamCam=await navigator.mediaDevices.getUserMedia({video:{facingMode:S.cam,width:{ideal:1280}},audio:false});
+      $('cam').srcObject=streamCam; await $('cam').play().catch(()=>{});
+      S.camara=true; guardar(); pintar(); log('Cámara encendida');
+    }catch(e){S.camara=false;guardar();pintar();log('Sin permiso de cámara','#ff7a7a')}
+  }else{
+    if(streamCam)streamCam.getTracks().forEach(t=>t.stop());
+    streamCam=null; S.camara=false; guardar(); pintar();
+  }
+}
+
+function abrir(nombre,planb){
+  if(S.modo==='manosfuera'){log('Manos fuera','#ffb98d');return}
+  if(!nombre)return;
+  let e=nombre, r=planb||'';
+  const l=(S.apps||'').split('\n').map(x=>x.split('|').map(y=>y.trim()))
+    .find(p=>p[0]&&p[0].toLowerCase()===nombre.toLowerCase());
+  if(l){e=l[1];r=l[2]||''}
+  if(/^[a-z]+:\/\//i.test(e))location.href=e;
+  else location.href='shortcuts://run-shortcut?name='+encodeURIComponent(e);
+  if(r)setTimeout(()=>window.open(r,'_blank'),1900);
+}
+
+async function responder(texto,imagen){
+  if(ocupada||dormida)return;
+  ocupada=true; estado('Pensando','piensa');
+  try{
+    const res=leerJSON(await cerebro(texto,imagen));
+    if(!res)return;
+    if(res.recordar&&!S.recuerdos.includes(res.recordar)){S.recuerdos.push(res.recordar);guardar();pintarRecuerdos()}
+    if(res.pose)S.pose=res.pose;
+    if(res.animo)animo=res.animo;
+    if(res.hablar!==false&&res.decir){
+      historial.push({role:'user',content:texto},{role:'assistant',content:res.decir});
+      historial=historial.slice(-12);
+      await decir(res.decir);
+    }
+    if(res.modo&&['dormida','escucha','activa','libre','manosfuera'].includes(res.modo))ponerModo(res.modo);
+    if(res.abrir)abrir(res.abrir,res.planb);
+  }catch(e){log('Fallo','#ff7a7a')}
+  ocupada=false;
+  if(!dormida)estado(S.modo==='escucha'?'Escuchando':'Contigo','viva');
+  setTimeout(()=>{animo='neutral'},6000);
+}
+
+function ponerModo(m){
+  S.modo=m; guardar(); dormida=m==='dormida';
+  if(dormida){estado('Dormida','duerme');if(rec){rec.onend=null;rec.stop()}rec=null;
+    $('parar').classList.add('on')}
+  else{$('parar').classList.remove('on');
+    estado(m==='escucha'?'Escuchando':'Contigo','viva');
+    if(!S.oidos)oidos(true); else if(!rec)escuchar()}
+  pintar();
+}
+
+/* ================= panel ================= */
+function abrirPanel(on){
+  $('panel').classList.toggle('abierto',on);
+  $('engranaje').classList.toggle('abierto',on);
+}
+function pintar(){
+  document.querySelectorAll('[data-modo]').forEach(b=>b.classList.toggle('sel',b.dataset.modo===S.modo));
+  document.querySelectorAll('[data-pose]').forEach(b=>b.classList.toggle('sel',b.dataset.pose===S.pose));
+  document.querySelectorAll('[data-cam]').forEach(b=>b.classList.toggle('sel',b.dataset.cam===S.cam));
+  $('tOjos').classList.toggle('on',S.ojos); $('tOidos').classList.toggle('on',S.oidos);
+  $('tSonido').classList.toggle('on',S.sonido); $('tCamara').classList.toggle('on',S.camara);
+  $('tViva').classList.toggle('on',S.viva);
+  $('tConsola').classList.toggle('on',S.consola);
+  $('consola').classList.toggle('oculta',!S.consola);
+  $('zoom').value=S.zoom; $('alto').value=S.alto;
+  $('vozModo').value=S.vozModo; $('ttsModelo').value=S.ttsModelo;
+  $('estilo').value=S.estilo; $('velocidad').value=S.velocidad;
+  $('cuota').value=S.cuota; $('nombre').value=S.nombre; $('clavePalabra').value=S.palabra;
+  $('apps').value=S.apps; $('usos').textContent=S.usos;
+}
+function pintarRecuerdos(){
+  const c=$('recuerdos'); c.innerHTML='';
+  if(!S.recuerdos.length){c.innerHTML='<p class="ayuda">Todavía no sabe nada de ti.</p>';return}
+  S.recuerdos.forEach((r,i)=>{
+    const d=document.createElement('div'); d.className='recuerdo';
+    const s=document.createElement('span'); s.textContent=r;
+    const b=document.createElement('button'); b.textContent='✕';
+    b.onclick=()=>{S.recuerdos.splice(i,1);guardar();pintarRecuerdos()};
+    d.append(s,b); c.appendChild(d);
+  });
+}
+function pintarProv(){
+  const p=PROVEEDORES[S.prov], m=$('modelo'); m.innerHTML='';
+  p.modelos.forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;m.appendChild(o)});
+  if(!p.modelos.includes(S.modelo))S.modelo=p.modelos[0];
+  m.value=S.modelo; $('ayudaProv').textContent=p.ayuda; $('clave').value=S.claves[S.prov]||'';
+}
+
+$('engranaje').onclick=()=>abrirPanel(!$('panel').classList.contains('abierto'));
+$('cerrar').onclick=()=>abrirPanel(false);
+$('parar').onclick=()=>{ponerModo(dormida?'activa':'dormida'); if(dormida&&streamCam)camara(false)};
+document.querySelectorAll('[data-modo]').forEach(b=>b.onclick=()=>ponerModo(b.dataset.modo));
+document.querySelectorAll('[data-pose]').forEach(b=>b.onclick=()=>{S.pose=b.dataset.pose;guardar();pintar()});
+document.querySelectorAll('[data-cam]').forEach(b=>b.onclick=async()=>{
+  S.cam=b.dataset.cam;guardar();pintar(); if(S.camara){await camara(false);camara(true)}});
+$('tOjos').onclick=()=>ojos(!S.ojos);
+$('tOidos').onclick=()=>oidos(!S.oidos);
+$('tSonido').onclick=()=>{S.sonido=!S.sonido;guardar();pintar();if(!S.sonido)speechSynthesis.cancel()};
+$('tCamara').onclick=()=>camara(!S.camara);
+$('tViva').onclick=()=>{S.viva=!S.viva;guardar();pintar()};
+$('tConsola').onclick=()=>{S.consola=!S.consola;guardar();pintar()};
+$('zoom').oninput=e=>{S.zoom=+e.target.value;guardar()};
+$('alto').oninput=e=>{S.alto=+e.target.value;guardar()};
+$('prov').onchange=e=>{S.prov=e.target.value;S.modelo=PROVEEDORES[S.prov].modelos[0];guardar();pintarProv()};
+$('modelo').onchange=e=>{S.modelo=e.target.value;guardar()};
+$('clave').oninput=e=>{S.claves[S.prov]=e.target.value.trim();guardar()};
+$('cuota').onchange=e=>{S.cuota=e.target.value;guardar();arrancarBucle()};
+$('vozModo').onchange=e=>{S.vozModo=e.target.value;guardar();cargarVoces()};
+$('ttsModelo').onchange=e=>{S.ttsModelo=e.target.value;S.voz=TTS[S.ttsModelo].v[0];guardar();cargarVoces()};
+$('vozSel').onchange=e=>{S.voz=e.target.value;guardar()};
+$('estilo').oninput=e=>{S.estilo=e.target.value;guardar()};
+$('velocidad').oninput=e=>{S.velocidad=+e.target.value;guardar()};
+$('nombre').oninput=e=>{S.nombre=e.target.value||'Vinsi';guardar()};
+$('clavePalabra').oninput=e=>{S.palabra=e.target.value||'vinsi';guardar()};
+$('apps').oninput=e=>{S.apps=e.target.value;guardar()};
+$('probarVoz').onclick=()=>decir('Hola, mi amor... ven aquí, que te vea.');
+$('addRecuerdo').onclick=()=>{const v=$('nuevoRecuerdo').value.trim(); if(!v)return;
+  S.recuerdos.push(v); $('nuevoRecuerdo').value=''; guardar(); pintarRecuerdos()};
+$('borrar').onclick=()=>{if(!confirm('¿Borrar claves y memoria?'))return;
+  localStorage.removeItem(LS+'estado'); location.reload()};
+
+const prov=$('prov');
+Object.entries(PROVEEDORES).forEach(([k,v])=>{const o=document.createElement('option');
+  o.value=k;o.textContent=v.nombre;prov.appendChild(o)});
+prov.value=S.prov;
+const tm=$('ttsModelo');
+Object.entries(TTS).forEach(([k,v])=>{const o=document.createElement('option');
+  o.value=k;o.textContent=v.n;tm.appendChild(o)});
+
+const hoy=new Date().toDateString();
+if(S.dia!==hoy){S.dia=hoy;S.usos=0;guardar()}
+pintar(); pintarProv(); pintarRecuerdos(); cargarVoces();
+estado('Dormida','duerme');
+bucle3D();
+cargar();
+document.addEventListener('touchstart',()=>{try{abrirAudio()}catch(e){}},{once:true});
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&S.oidos&&!dormida&&!rec)escuchar()});
+</script>
+</body>
+</html>
