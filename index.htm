@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0710">
+<title>Vinsi</title>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+"@pixiv/three-vrm":"https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.2.0/lib/three-vrm.module.min.js"}}
+</script>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div id="escena">
+  <div id="cono"></div>
+  <canvas id="lienzo"></canvas>
+  <img id="foto" src="IMG_0336.png" alt="">
+  <div id="lineas"></div><div id="vineta"></div>
+</div>
+<div id="carga">Despertando…</div>
+
+<div id="consola" class="oculta"></div>
+<div id="pildora"><div id="punto"></div><span id="estadoTxt">Dormida</span></div>
+<button class="flot" id="parar">PARAR</button>
+<button class="flot" id="engranaje">⚙</button>
+
+<div id="panel">
+  <div id="cab"><h1>Ajustes</h1><button id="cerrar">✕</button></div>
+  <h2>Modo</h2>
+  <div class="rejilla">
+    <button class="b" data-modo="dormida">Dormida</button>
+    <button class="b" data-modo="escucha">Escucha</button>
+    <button class="b" data-modo="activa">Activa</button>
+    <button class="b" data-modo="libre">Libre</button>
+  </div>
+  <div style="height:8px"></div>
+  <button class="b" data-modo="manosfuera">Manos fuera (habla, no toca nada)</button>
+
+  <h2>Sentidos</h2>
+  <div class="op"><span>Ojos<small>Ver tu pantalla</small></span><button class="inter" id="tOjos"></button></div>
+  <div class="op"><span>Oídos<small>Micrófono abierto</small></span><button class="inter" id="tOidos"></button></div>
+  <div class="op"><span>Voz<small>Que te hable</small></span><button class="inter" id="tSonido"></button></div>
+  <div class="op"><span>Cámara<small>Que te vea</small></span><button class="inter" id="tCamara"></button></div>
+  <div class="rejilla"><button class="b" data-cam="user">Delantera</button><button class="b" data-cam="environment">Trasera</button></div>
+
+  <h2>Su cuerpo</h2>
+  <div class="op"><span>Cuerpo 3D<small>Apágalo si va lento</small></span><button class="inter" id="t3D"></button></div>
+  <div class="rejilla3">
+    <button class="b" data-pose="normal">Suelta</button>
+    <button class="b" data-pose="manos">Manos</button>
+    <button class="b" data-pose="cerca">Primer plano</button>
+  </div>
+  <div class="op" style="margin-top:10px"><span>Viva<small>Que respire y se mueva</small></span><button class="inter" id="tViva"></button></div>
+  <label>Tamaño</label><input type="range" id="zoom" min="0.6" max="2" step="0.02">
+  <label>Altura</label><input type="range" id="alto" min="-0.4" max="0.8" step="0.01">
+  <div class="op" style="margin-top:10px"><span>Texto en pantalla</span><button class="inter" id="tConsola"></button></div>
+
+  <h2>Cerebro</h2>
+  <label>Proveedor</label><select id="prov"></select>
+  <label>Modelo</label><select id="modelo"></select>
+  <label>Clave</label><input id="clave" type="password" placeholder="Tu clave">
+  <p class="ayuda" id="ayudaProv"></p>
+  <label>Cuota de miradas</label>
+  <select id="cuota">
+    <option value="ahorro">Ahorro - cada 11 s</option>
+    <option value="normal">Normal - cada 6 s</option>
+    <option value="intenso">Intenso - cada 3,5 s</option>
+  </select>
+  <p class="ayuda">Consultas hoy: <b id="usos">0</b></p>
+
+  <h2>Su voz</h2>
+  <select id="vozModo">
+    <option value="venice">Voz de Venice (humana, de pago)</option>
+    <option value="ipad">Voz del iPad (gratis)</option>
+  </select>
+  <label>Modelo de voz</label><select id="ttsModelo"></select>
+  <label>Voz</label><select id="vozSel"></select>
+  <label>Estilo al hablar</label><input id="estilo" placeholder="cálida, cercana, sonriendo">
+  <label>Velocidad</label><input type="range" id="velocidad" min="0.8" max="1.15" step="0.02">
+  <div class="fila"><button class="mini" id="probarVoz">Probar</button></div>
+
+  <h2>Su memoria</h2>
+  <div class="recuerdos" id="recuerdos"></div>
+  <div class="fila"><input id="nuevoRecuerdo" placeholder="Enséñale algo de ti..."><button class="mini" id="addRecuerdo">Añadir</button></div>
+
+  <h2>Ella</h2>
+  <label>Su nombre</label><input id="nombre" placeholder="Vinsi">
+  <label>Palabra para llamarla</label><input id="clavePalabra" placeholder="vinsi">
+  <label>Apps que puede abrir (nombre | enlace | plan B)</label><textarea id="apps"></textarea>
+
+  <h2>Todo</h2>
+  <button class="b peligro" id="borrar" style="margin-top:6px">Borrar claves y memoria</button>
+</div>
+
+<video id="vista" playsinline muted></video>
+<video id="cam" playsinline muted autoplay></video>
+
+<script src="app.js" defer></script>
+<script type="module" src="3d.js"></script>
+</body>
+</html>
