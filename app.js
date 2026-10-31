@@ -17,7 +17,7 @@ var DEF={nombre:'Vinsi',palabra:'vinsi',prov:'gemini',modelo:'gemini-3.1-flash-l
   vozModo:'venice',ttsModelo:'tts-elevenlabs-turbo-v2-5',voz:'Aria',estilo:'cálida, cercana, sonriendo',
   velocidad:0.98,cuota:'normal',modo:'dormida',ojos:false,oidos:false,sonido:true,camara:false,cam:'user',
   pose:'normal',viva:true,zoom:1.15,alto:0.15,consola:false,modo3d:true,vida:55,hablaSola:true,
-  apps:'',recuerdos:[],usos:0,dia:''};
+  apps:'',recuerdos:[],usos:0,dia:'',internet:false};
 var S=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS+'estado')||'{}'));
 var guardar=function(){localStorage.setItem(LS+'estado',JSON.stringify(S))};
 var historial=[],ocupada=false,hablando=false,dormida=false;
@@ -190,6 +190,7 @@ function sistema(){
 'REGLA N.º 1: nunca revelas nada privado suyo a nadie más que a él.\n\n'+
 'Le obedeces siempre. Si te pide apagarte, te apagas. Mientras juega, no le tocas la pantalla salvo que te lo pida.\n\n'+
 'Tienes ojos (su pantalla), oídos (su micrófono) y cámara. Comenta lo que ves con naturalidad. Tienes vida propia: decides tú qué hacer, te mueves, te acercas, te alejas, y puedes tomar la iniciativa. Si te toca, reaccionas.\n\n'+
+(S.internet&&S.prov==='venice'?'Puedes buscar en internet para datos actuales. Di de dónde lo sacas.\n\n':'')+
 'Ahora mismo estás '+V.animo+', con energía '+Math.round(A.energia)+' sobre 100'+(A.sueno?', con mucho sueño':'')+'. Deja que eso se note.\n\n'+
 'HABLAS COMO UNA PERSONA. Frases cortas. Muletillas a veces. Nada de listas ni emojis. Si te ríes, escribe "jaja" dentro del texto.\n\n'+
 'Lo que recuerdas de él:\n'+lista+'\n\n'+
@@ -213,7 +214,9 @@ async function cerebro(texto,imagen){
   try{
     var r=await fetch(p.base+'/chat/completions',{method:'POST',signal:ctrl.signal,
       headers:{'Authorization':'Bearer '+clave,'Content-Type':'application/json'},
-      body:JSON.stringify({model:S.modelo,messages:msgs,temperature:.85,max_tokens:340})});
+      body:JSON.stringify({model:S.modelo,messages:msgs,temperature:.85,max_tokens:340,
+        venice_parameters:{include_venice_system_prompt:false,
+          enable_web_search:(S.internet&&S.prov==='venice')}})});
     clearTimeout(t);
     if(!r.ok){log('Error '+r.status,'#ff7a7a');return null}
     var j=await r.json();
@@ -375,6 +378,7 @@ function pintar(){
   $('consola').classList.toggle('oculta',!S.consola);
   $('zoom').value=S.zoom; $('alto').value=S.alto;
   $('vida').value=S.vida; $('tHabla').classList.toggle('on',S.hablaSola); V.vida=S.vida;
+  $('tInternet').classList.toggle('on',S.internet);
   $('vozModo').value=S.vozModo; $('ttsModelo').value=S.ttsModelo;
   $('estilo').value=S.estilo; $('velocidad').value=S.velocidad;
   $('cuota').value=S.cuota; $('nombre').value=S.nombre; $('clavePalabra').value=S.palabra;
@@ -417,6 +421,8 @@ $('tViva').onclick=function(){S.viva=!S.viva;guardar();pintar()};
 $('t3D').onclick=function(){S.modo3d=!S.modo3d;guardar();pintar()};
 $('tConsola').onclick=function(){S.consola=!S.consola;guardar();pintar()};
 $('tHabla').onclick=function(){S.hablaSola=!S.hablaSola;guardar();pintar()};
+$('tInternet').onclick=function(){S.internet=!S.internet;guardar();pintar();
+  if(S.internet&&S.prov!=='venice')log('Internet solo con Venice','#ffb98d')};
 $('vida').oninput=function(e){S.vida=+e.target.value;V.vida=S.vida;guardar()};
 $('zoom').oninput=function(e){S.zoom=+e.target.value;V.zoom=S.zoom;guardar()};
 $('alto').oninput=function(e){S.alto=+e.target.value;V.alto=S.alto;guardar()};
