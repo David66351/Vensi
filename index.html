@@ -114,8 +114,10 @@
   .linea{background:rgba(12,8,18,.66);border:1px solid var(--linea);border-radius:9px;padding:7px 10px;
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);line-height:1.4;animation:entrar .3s ease-out}
   @keyframes entrar{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  #carga{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60;
-    background:#07050c;font-size:13px;color:var(--tenue);letter-spacing:.1em;text-transform:uppercase}
+  #carga{position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(env(safe-area-inset-bottom) + 116px);z-index:60;padding:8px 15px;border-radius:999px;
+    background:rgba(20,12,28,.85);border:1px solid var(--linea);font-size:11.5px;
+    color:var(--tenue);letter-spacing:.08em;text-transform:uppercase}
   #carga.oculta{display:none}
   video{display:none}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -205,6 +207,16 @@
 <video id="vista" playsinline muted></video>
 <video id="cam" playsinline muted autoplay></video>
 
+<script>
+setTimeout(function(){
+  var c=document.getElementById('carga');
+  if(c&&!c.classList.contains('oculta')){
+    c.classList.add('oculta');
+    document.getElementById('foto').classList.add('on');
+  }
+},12000);
+</script>
+
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -232,7 +244,7 @@ const DEF={nombre:'Vinsi',palabra:'vinsi',prov:'gemini',modelo:'gemini-3.1-flash
 let S=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS+'estado')||'{}'));
 const guardar=()=>localStorage.setItem(LS+'estado',JSON.stringify(S));
 let historial=[],ocupada=false,hablando=false,dormida=false,animo='neutral';
-let streamPantalla=null,streamCam=null,rec=null,bucle=null,curioso=null;
+let streamPantalla=null,streamCam=null,rec=null,bucle=null;
 let ctxAudio=null,analizador=null,datosAudio=null,raf=null,fuente=null,audioActual=null,voces=[];
 
 function log(t,c){const d=document.createElement('div');d.className='linea';
@@ -266,9 +278,11 @@ const loader=new GLTFLoader();
 loader.register(p=>new VRMLoaderPlugin(p));
 
 async function cargar(){
+  $('carga').textContent='Cargando su cuerpo…';
   for(const url of MODELOS){
     try{
-      const gltf=await loader.loadAsync(url);
+      const gltf=await Promise.race([loader.loadAsync(url),
+        new Promise((_,no)=>setTimeout(()=>no(new Error('tarda')),18000))]);
       vrm=gltf.userData.vrm;
       if(!vrm)continue;
       VRMUtils.removeUnnecessaryVertices(gltf.scene);
@@ -280,11 +294,12 @@ async function cargar(){
       const g=n=>vrm.humanoid.getNormalizedBoneNode(n);
       huesos={pecho:g('chest'),cabeza:g('head'),cuello:g('neck'),cadera:g('hips'),
         lBrazo:g('leftUpperArm'),rBrazo:g('rightUpperArm'),
-        lAnte:g('leftLowerArm'),rAnte:g('rightLowerArm'),lMano:g('leftHand'),rMano:g('rightHand')};
+        lAnte:g('leftLowerArm'),rAnte:g('rightLowerArm')};
       $('carga').classList.add('oculta');
+      $('foto').classList.remove('on');
       log('Cuerpo 3D cargado','#7fd6a2');
       return true;
-    }catch(e){ log('No pude cargar un modelo, pruebo otro','#ffb98d') }
+    }catch(e){ log('Un modelo falló, pruebo otro','#ffb98d') }
   }
   $('foto').classList.add('on'); $('carga').classList.add('oculta');
   log('Sin 3D: uso su foto','#ff7a7a');
@@ -306,9 +321,8 @@ function bucle3D(){
       huesos.cabeza.rotation.x=Math.sin(t*.63)*.05*viva-amp*.04;
       huesos.cabeza.rotation.z=Math.sin(t*.31)*.05*viva;
     }
-    const pose=S.pose;
     if(huesos.lBrazo&&huesos.rBrazo){
-      const gs=pose==='manos'?1:0;
+      const gs=S.pose==='manos'?1:0;
       const sw=Math.sin(t*.8)*.04*viva;
       huesos.lBrazo.rotation.z=(-1.15-gs*.35)+sw;
       huesos.rBrazo.rotation.z=(1.15+gs*.35)-sw;
@@ -393,7 +407,7 @@ function cargarVoces(){
 }
 if(window.speechSynthesis){speechSynthesis.onvoiceschanged=cargarVoces;setTimeout(cargarVoces,400)}
 
-async function decir(texto,estilo){
+async function decir(texto){
   if(!texto||!S.sonido)return;
   log(S.nombre+': '+texto,'#ffd9a0');
   hablando=true; pausarOidos();
